@@ -129,10 +129,10 @@ app.post('/api/officer/signin', async (req, res) => {
     }
 });
 
-// Production-e React frontend static files serve korar jonno
+// Production-e React frontend static files serve korar jonno (API routes bad diye)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-app.get('*', (req, res) => {
+app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
 });
 
