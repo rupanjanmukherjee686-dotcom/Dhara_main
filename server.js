@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Atlas ক্লাউড কানেকশন
-const mongoURI = "mongodb+srv://rupanjanmukherjee686_db_user:RhtdmQDuxfObt9M9@cluster0.5upqtsy.mongodb.net/dhara_portal?retryWrites=true&w=majority&appName=Cluster0";
+const mongoURI = "${{ secrets.DB_SECRET }}";
 
 mongoose.connect(mongoURI)
   .then(() => console.log("MongoDB Atlas Connected Successfully!"))
