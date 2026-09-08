@@ -163,7 +163,7 @@ function SignIn() {
       if (!identifier || !password) return
 
       try {
-        const response = await fetch('http://localhost:5000/api/officer/signin', {
+        const response = await fetch('https://dhara-main.onrender.com/api/officer/signin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -220,7 +220,7 @@ function SignIn() {
     try {
       if (isSignUpMode) {
         // Step A: Register the user if it's Sign-Up mode
-        const signupResponse = await fetch('http://localhost:5000/api/signup', {
+        const signupResponse = await fetch('https://dhara-main.onrender.com/api/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email: identifier, password }),
@@ -246,7 +246,7 @@ function SignIn() {
       }
 
       // Step B: Authenticate and sign in the user
-      const loginResponse = await fetch('http://localhost:5000/api/signin', {
+      const loginResponse = await fetch('https://dhara-main.onrender.com/api/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: identifier, password }),
@@ -775,7 +775,7 @@ function SignIn() {
                     }
                     className="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition shrink-0"
                   >
-                    <X size={16} />
+                    <X size5={16} />
                   </button>
                 </div>
 
