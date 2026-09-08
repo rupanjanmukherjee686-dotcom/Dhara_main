@@ -1,373 +1,362 @@
-import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
-  Building2,
-  ClipboardCheck,
-  FileText,
-  LandPlot,
+  ArrowUpRight,
+  CheckCircle2,
+  Crosshair,
+  Landmark,
   MapPin,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react"
-import { motion } from "framer-motion"
+  Shield,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  Activity,
+  Layers,
+  FileText,
+  AlertCircle
+} from "lucide-react";
 
-const STORAGE_KEY = "dhara-projects"
+export default function StateDashboard() {
+  const [proposals, setProposals] = useState([]);
+  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-function StateDashboard() {
-  const navigate = useNavigate()
-
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const loadProjects = () => {
-    try {
-      const storedProjects = JSON.parse(
-        localStorage.getItem(STORAGE_KEY) || "[]"
-      )
-
-      const stateProjects = storedProjects.filter(
-        (project) =>
-          project.stage === "State Scrutiny" &&
-          project.authority === "State Authority"
-      )
-
-      setProjects(stateProjects)
-    } catch (error) {
-      console.error("Failed to load state projects:", error)
-      setProjects([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Form states for scrutiny
+  const [stateScrutinyStatus, setStateScrutinyStatus] = useState('Pending');
+  const [landBankStatus, setLandBankStatus] = useState('Unchecked');
+  const [gisRequired, setGisRequired] = useState(false);
+  const [actComplianceChecked, setActComplianceChecked] = useState(false);
+  const [stateRemarks, setStateRemarks] = useState('');
 
   useEffect(() => {
-    loadProjects()
+    fetchProposals();
+  }, []);
 
-    const handleStorageChange = () => {
-      loadProjects()
+  const fetchProposals = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/state/proposals');
+      const data = await response.json();
+      if (data.success) {
+        setProposals(data.proposals);
+      }
+    } catch (err) {
+      console.error("Error fetching proposals:", err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    window.addEventListener("storage", handleStorageChange)
+  const handleSelectProposal = (prop) => {
+    setSelectedProposal(prop);
+    setStateScrutinyStatus(prop.stateScrutinyStatus || 'Pending');
+    setLandBankStatus(prop.landBankStatus || 'Unchecked');
+    setGisRequired(prop.gisRequired || false);
+    setActComplianceChecked(prop.actComplianceChecked || false);
+    setStateRemarks(prop.stateRemarks || '');
+  };
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange)
+  const handleLandBankChange = (status) => {
+    setLandBankStatus(status);
+    if (status === 'Not Found') {
+      setGisRequired(true);
+    } else {
+      setGisRequired(false);
     }
-  }, [])
+  };
 
-  const totalLand = useMemo(() => {
-    return projects.reduce(
-      (total, project) => total + Number(project.landArea || 0),
-      0
-    )
-  }, [projects])
+  const handleScrutinySubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProposal) return;
 
-  const totalParcels = useMemo(() => {
-    return projects.reduce(
-      (total, project) => total + Number(project.parcels || 0),
-      0
-    )
-  }, [projects])
+    setSubmitting(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/state/scrutiny/${selectedProposal.projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stateScrutinyStatus,
+          landBankStatus,
+          gisRequired,
+          actComplianceChecked,
+          stateRemarks,
+          currentStage: stateScrutinyStatus === 'Verified' ? 'Forwarded to District & Central' : 'State Scrutiny In Progress'
+        })
+      });
 
-  const handleReview = (projectId) => {
-    if (!projectId) return
+      const data = await response.json();
+      if (data.success) {
+        alert("Scrutiny updated and data forwarded successfully!");
+        fetchProposals();
+        setSelectedProposal(null);
+      } else {
+        alert("Failed to update: " + data.message);
+      }
+    } catch (err) {
+      console.error("Error updating scrutiny:", err);
+      alert("Server error occurred!");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    navigate(`/portal/state/project/${projectId}`)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-jakarta flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#1e3a8a] border-r-transparent"></div>
+          <p className="mt-4 text-sm font-semibold text-slate-600">Loading State Scrutiny Queue...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
-      {/* HEADER */}
-      <header className="border-b border-[var(--line)] bg-[var(--paper)]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-          <div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        body, .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+      `}</style>
+
+      <main className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-jakarta">
+        
+        {/* Top Bar */}
+        <div className="bg-[#1e3a8a] text-white px-5 py-2 text-[11px] font-medium flex justify-between items-center border-b border-blue-900">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-4 h-3 bg-orange-500 rounded-sm"></span>
+            <span>Ministry of Land and Infrastructure, Government of India — State Authority Oversight</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-4">
+            <span className="cursor-pointer hover:underline">State Scrutiny Panel</span>
+            <span>|</span>
+            <span className="cursor-pointer hover:underline">DHARA System v2.6</span>
+          </div>
+        </div>
+
+        {/* Header Navigation */}
+        <nav className="relative z-50 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3 md:px-10 shadow-sm">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center border border-[var(--ink)] bg-[var(--ink)] text-[var(--paper)]">
-                <ShieldCheck size={18} />
+              <div className="flex h-10 w-10 items-center justify-center bg-[#1e3a8a] text-white rounded font-bold">
+                <span className="font-outfit text-lg">🇮🇳</span>
               </div>
-
               <div>
-                <p className="font-serif text-lg tracking-tight">
-                  DHARA
-                </p>
-
-                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-                  State Authority
-                </p>
+                <p className="font-outfit text-lg font-bold tracking-wide text-[#1e3a8a]">DHARA</p>
+                <p className="text-[10px] font-semibold tracking-wide text-slate-500">STATE SCRUTINY & LAND BANK PORTAL</p>
               </div>
             </div>
           </div>
 
-          <div className="hidden text-right sm:block">
-            <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-              Maharashtra
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold text-slate-800">State Officer Portal</p>
+              <p className="text-[10px] text-slate-500 font-medium">Logged in securely</p>
+            </div>
+            <div className="h-9 w-9 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[#1e3a8a] font-bold text-xs">
+              SO
+            </div>
+          </div>
+        </nav>
 
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em]">
-              State-level land scrutiny
+        {/* Dashboard Main Container */}
+        <div className="mx-auto max-w-7xl px-5 py-10 md:px-10">
+          <div className="mb-8">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">02 / Administrative Review</p>
+            <h1 className="mt-2 font-outfit text-3xl md:text-4xl font-bold text-slate-900">
+              State Scrutiny & Land Allocation Dashboard
+            </h1>
+            <p className="mt-2 text-sm text-slate-600 font-medium">
+              Review submitted project proposals, verify land bank availability, trigger GIS mapping when required, and enforce statutory act compliances.
             </p>
           </div>
-        </div>
-      </header>
 
-      {/* CONTENT */}
-      <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-        {/* PAGE INTRO */}
-        <div className="mb-8 border-b border-[var(--line)] pb-7">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-            <div>
-              <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--earth)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--earth)]" />
-                State scrutiny queue
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_2fr]">
+            
+            {/* Left Column: Proposal List Queue */}
+            <div className="bg-white border border-slate-300 rounded-xl p-5 shadow-sm flex flex-col h-[70vh]">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-4">
+                <h2 className="font-outfit text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileText size={16} className="text-[#1e3a8a]" /> Proposals Queue ({proposals.length})
+                </h2>
+                <span className="text-xs font-bold px-2.5 py-1 rounded bg-blue-50 text-[#1e3a8a] border border-blue-200">
+                  Live Feed
+                </span>
               </div>
 
-              <h1 className="max-w-3xl font-serif text-3xl leading-tight sm:text-4xl">
-                Projects requiring state-level review.
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-soft)]">
-                Review projects that have completed district-level field
-                verification and have been forwarded for state scrutiny.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={loadProjects}
-              className="inline-flex w-fit items-center gap-2 border border-[var(--line-dark)] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.14em] transition hover:border-[var(--ink)] hover:bg-[var(--paper-deep)]"
-            >
-              <RefreshCw size={13} />
-              Refresh queue
-            </button>
-          </div>
-        </div>
-
-        {/* STAT STRIP */}
-        <div className="mb-10 grid grid-cols-1 border border-[var(--line)] sm:grid-cols-3">
-          <div className="border-b border-[var(--line)] p-5 sm:border-b-0 sm:border-r">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-soft)]">
-                Pending review
-              </span>
-
-              <ClipboardCheck size={15} />
-            </div>
-
-            <p className="font-serif text-3xl">{projects.length}</p>
-
-            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-              Projects
-            </p>
-          </div>
-
-          <div className="border-b border-[var(--line)] p-5 sm:border-b-0 sm:border-r">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-soft)]">
-                Land under scrutiny
-              </span>
-
-              <LandPlot size={15} />
-            </div>
-
-            <p className="font-serif text-3xl">
-              {totalLand.toLocaleString()}
-            </p>
-
-            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-              Acres
-            </p>
-          </div>
-
-          <div className="p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-[var(--ink-soft)]">
-                Parcels
-              </span>
-
-              <MapPin size={15} />
-            </div>
-
-            <p className="font-serif text-3xl">
-              {totalParcels.toLocaleString()}
-            </p>
-
-            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-              Across submitted projects
-            </p>
-          </div>
-        </div>
-
-        {/* QUEUE */}
-        <section>
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-                Review queue
-              </p>
-
-              <h2 className="mt-1 font-serif text-2xl">
-                State scrutiny
-              </h2>
-            </div>
-
-            <span className="font-mono text-[10px] text-[var(--ink-soft)]">
-              {projects.length.toString().padStart(2, "0")} RECORDS
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="border border-[var(--line)] p-10 text-center">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--ink-soft)]">
-                Loading state queue...
-              </p>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="border border-dashed border-[var(--line-dark)] p-10 text-center">
-              <ShieldCheck
-                size={28}
-                className="mx-auto mb-4 text-[var(--ink-soft)]"
-              />
-
-              <h3 className="font-serif text-xl">
-                No projects awaiting state review.
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--ink-soft)]">
-                Projects confirmed by the District Authority after field
-                verification will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {projects.map((project, index) => (
-                <motion.article
-                  key={project.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border border-[var(--line)] bg-[var(--white)]"
-                >
-                  {/* CARD TOP */}
-                  <div className="border-b border-[var(--line)] p-5 sm:p-6">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                          <span className="border border-[var(--earth)] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--earth)]">
-                            Pending State Review
-                          </span>
-
-                          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-                            {project.id}
+              <div className="overflow-y-auto flex-1 space-y-3 pr-1">
+                {proposals.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 text-xs font-medium">
+                    No proposals found in the system database.
+                  </div>
+                ) : (
+                  proposals.map((prop) => {
+                    const isSelected = selectedProposal?.projectId === prop.projectId;
+                    return (
+                      <div
+                        key={prop.projectId}
+                        onClick={() => handleSelectProposal(prop)}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-[#1e3a8a] bg-blue-50/60 shadow-sm' 
+                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <p className="font-outfit font-bold text-slate-900 text-sm">
+                            {prop.projectName || prop.title || 'Untitled Project'}
+                          </p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                            prop.stateScrutinyStatus === 'Verified' 
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                              : prop.stateScrutinyStatus === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}>
+                            {prop.stateScrutinyStatus || 'Pending'}
                           </span>
                         </div>
-
-                        <h3 className="font-serif text-2xl leading-tight">
-                          {project.projectName || "Untitled Project"}
-                        </h3>
-
-                        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--ink-soft)]">
-                          <span className="inline-flex items-center gap-1.5">
-                            <Building2 size={12} />
-                            {project.projectType || "Project"}
-                          </span>
-
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin size={12} />
-                            {project.district || "District"},{" "}
-                            {project.state || "State"}
-                          </span>
-                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1 font-medium">ID: {prop.projectId}</p>
+                        <p className="text-xs text-slate-600 mt-2 font-semibold">Company: {prop.companyName || prop.email || 'N/A'}</p>
                       </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
 
-                      <div className="flex shrink-0 flex-col items-start lg:items-end">
-                        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                          Submitted
-                        </span>
-
-                        <span className="mt-1 font-mono text-[10px]">
-                          {project.submittedAt
-                            ? new Date(
-                                project.submittedAt
-                              ).toLocaleDateString("en-IN")
-                            : "—"}
-                        </span>
-                      </div>
-                    </div>
+            {/* Right Column: Scrutiny Detail & Action Panel */}
+            <div className="bg-white border border-slate-300 rounded-xl p-6 md:p-8 shadow-sm">
+              {selectedProposal ? (
+                <form onSubmit={handleScrutinySubmit} className="space-y-6">
+                  <div className="border-b border-slate-200 pb-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      Active Scrutiny Session
+                    </span>
+                    <h2 className="mt-2 font-outfit text-2xl font-bold text-slate-900">
+                      {selectedProposal.projectName || selectedProposal.title}
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium mt-1">Proposal Reference ID: {selectedProposal.projectId}</p>
                   </div>
 
-                  {/* CARD DETAILS */}
-                  <div className="grid grid-cols-1 divide-y divide-[var(--line)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                    <div className="p-5">
-                      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                        Land requirement
-                      </p>
-
-                      <p className="mt-2 font-serif text-xl">
-                        {project.landArea || "—"}
-                      </p>
-
-                      <p className="mt-1 font-mono text-[9px] uppercase text-[var(--ink-soft)]">
-                        Acres
-                      </p>
-                    </div>
-
-                    <div className="p-5">
-                      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                        Parcels
-                      </p>
-
-                      <p className="mt-2 font-serif text-xl">
-                        {project.parcels || "—"}
-                      </p>
-
-                      <p className="mt-1 font-mono text-[9px] uppercase text-[var(--ink-soft)]">
-                        Identified parcels
-                      </p>
-                    </div>
-
-                    <div className="p-5">
-                      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                        Previous verification
-                      </p>
-
-                      <p className="mt-2 flex items-center gap-2 font-serif text-xl">
-                        <ShieldCheck size={18} />
-                        {project.districtFieldReview || "Verified"}
-                      </p>
-
-                      <p className="mt-1 font-mono text-[9px] uppercase text-[var(--ink-soft)]">
-                        District field review
-                      </p>
-                    </div>
+                  <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div><span className="font-semibold text-slate-500">Company Name:</span> <p className="font-bold text-slate-800 mt-0.5">{selectedProposal.companyName || 'N/A'}</p></div>
+                    <div><span className="font-semibold text-slate-500">Contact Email:</span> <p className="font-bold text-slate-800 mt-0.5">{selectedProposal.email || selectedProposal.userEmail || 'N/A'}</p></div>
+                    <div><span className="font-semibold text-slate-500">Land Required:</span> <p className="font-bold text-slate-800 mt-0.5">{selectedProposal.totalLandRequired || '0'} {selectedProposal.landUnit || 'Acres'}</p></div>
+                    <div><span className="font-semibold text-slate-500">District:</span> <p className="font-bold text-slate-800 mt-0.5">{selectedProposal.district || 'N/A'}</p></div>
                   </div>
 
-                  {/* CARD FOOTER */}
-                  <div className="flex flex-col gap-4 border-t border-[var(--line)] bg-[var(--paper)] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                    <div className="flex items-center gap-2">
-                      <FileText size={14} />
-
-                      <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--ink-soft)]">
-                        Review project records and state-level findings
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleReview(project.id)}
-                      className="inline-flex items-center justify-center gap-3 border border-[var(--ink)] bg-[var(--ink)] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--paper)] transition hover:bg-[var(--earth)] hover:border-[var(--earth)]"
+                  {/* 1. Land Bank Verification */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      1. Land Bank Availability Check
+                    </label>
+                    <select
+                      value={landBankStatus}
+                      onChange={(e) => handleLandBankChange(e.target.value)}
+                      className="w-full p-3 text-xs font-semibold rounded-lg border border-slate-300 bg-white focus:border-[#1e3a8a] focus:outline-none"
                     >
-                      Review project
-                      <ArrowRight size={14} />
-                    </button>
+                      <option value="Unchecked">Select Land Bank Status</option>
+                      <option value="Available">Available in Land Bank</option>
+                      <option value="Not Found">Not Found in Land Bank</option>
+                    </select>
                   </div>
-                </motion.article>
-              ))}
-            </div>
-          )}
-        </section>
-      </section>
-    </main>
-  )
-}
 
-export default StateDashboard
+                  {/* 2. Dynamic GIS Section (Triggered if Land Bank Not Found) */}
+                  {gisRequired && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-5 bg-orange-50/70 border border-orange-200 rounded-xl space-y-3"
+                    >
+                      <div className="flex items-center gap-2 text-orange-800 font-bold text-xs uppercase tracking-wider">
+                        <MapPin size={16} /> GIS Section (Alternative Land Acquisition)
+                      </div>
+                      <p className="text-xs text-orange-700 font-medium">
+                        Since land is unavailable in the Land Bank, specify geographical coordinates or mark boundaries for alternative acquisition protocols.
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          placeholder="Latitude (e.g. 22.5726° N)"
+                          className="p-2.5 text-xs rounded-lg border border-orange-300 bg-white font-medium focus:outline-none focus:border-orange-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Longitude (e.g. 88.3639° E)"
+                          className="p-2.5 text-xs rounded-lg border border-orange-300 bg-white font-medium focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* 3. Statutory Act Compliance */}
+                  <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <input
+                      type="checkbox"
+                      id="actCompliance"
+                      checked={actComplianceChecked}
+                      onChange={(e) => setActComplianceChecked(e.target.checked)}
+                      className="w-4 h-4 text-[#1e3a8a] border-slate-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="actCompliance" className="text-xs font-semibold text-slate-800 cursor-pointer">
+                      Verify compliance with LARR Act 2013 & West Bengal Land Reforms Act
+                    </label>
+                  </div>
+
+                  {/* 4. Scrutiny Status Decision */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Scrutiny Status Decision
+                    </label>
+                    <select
+                      value={stateScrutinyStatus}
+                      onChange={(e) => setStateScrutinyStatus(e.target.value)}
+                      className="w-full p-3 text-xs font-semibold rounded-lg border border-slate-300 bg-white focus:border-[#1e3a8a] focus:outline-none"
+                    >
+                      <option value="Pending">Pending Review</option>
+                      <option value="Verified">Verified & Forward (to District & Central)</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      State Officer Remarks
+                    </label>
+                    <textarea
+                      rows="3"
+                      value={stateRemarks}
+                      onChange={(e) => setStateRemarks(e.target.value)}
+                      placeholder="Enter administrative remarks regarding land availability, compliance, and recommendations..."
+                      className="w-full p-3 text-xs rounded-lg border border-slate-300 bg-white font-medium focus:border-[#1e3a8a] focus:outline-none"
+                    ></textarea>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-[#1e3a8a] hover:bg-blue-900 text-white text-xs uppercase tracking-wider py-3.5 px-6 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {submitting ? 'Processing Scrutiny...' : 'Submit Scrutiny & Forward Data'} <ArrowUpRight size={14} />
+                  </button>
+                </form>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[50vh] text-center text-slate-400">
+                  <Activity size={36} className="text-slate-300 mb-3" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-600">No Proposal Selected</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs font-medium">
+                    Select a proposal from the left queue to perform state-level verification and land bank checks.
+                  </p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+    </>
+  );
+}

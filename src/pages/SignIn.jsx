@@ -265,6 +265,9 @@ function SignIn() {
         return;
       }
 
+      // Save user email to localStorage for dynamic project fetching
+      localStorage.setItem('userEmail', identifier);
+
       setVerified(true)
       setTimeout(() => {
         if (selectedPortal?.path) {

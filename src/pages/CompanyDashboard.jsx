@@ -12,46 +12,40 @@ import {
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-const fallbackProjects = [
-  {
-    id: "DH-MH-2026-001",
-    name: "Eastern Industrial Corridor",
-    location: "Pune, Maharashtra",
-    land: "248 acres",
-    parcels: 42,
-    stage: "District Scrutiny",
-    status: "In progress",
-  },
-  {
-    id: "DH-MH-2026-002",
-    name: "Logistics & Manufacturing Hub",
-    location: "Nashik, Maharashtra",
-    land: "126 acres",
-    parcels: 19,
-    stage: "Proposal Submitted",
-    status: "Awaiting review",
-  },
-]
-
 function CompanyDashboard() {
   const navigate = useNavigate()
 
   const [projects, setProjects] = useState([])
 
   useEffect(() => {
-    try {
-      const storedProjects = JSON.parse(
-        localStorage.getItem("dhara-projects") || "[]"
-      )
+    const fetchProjects = async () => {
+      try {
+        const userEmail = localStorage.getItem("userEmail")
+        
+        if (userEmail) {
+          const response = await fetch(`http://localhost:5000/api/projects?email=${encodeURIComponent(userEmail)}`)
+          const text = await response.text()
+          let data = {}
+          try {
+            data = text ? JSON.parse(text) : {}
+          } catch (e) {
+            console.error("Invalid JSON response:", text)
+          }
 
-      if (Array.isArray(storedProjects) && storedProjects.length > 0) {
-        setProjects(storedProjects)
-      } else {
-        setProjects(fallbackProjects)
+          if (response.ok && data.success && Array.isArray(data.projects)) {
+            setProjects(data.projects)
+            return
+          }
+        }
+
+        setProjects([])
+      } catch (err) {
+        console.error("Error fetching projects:", err)
+        setProjects([])
       }
-    } catch {
-      setProjects(fallbackProjects)
     }
+
+    fetchProjects()
   }, [])
 
   const totalProjects = projects.length
@@ -70,528 +64,341 @@ function CompanyDashboard() {
 
   const handleOpenProject = (projectId) => {
     if (!projectId) return
-
     navigate(`/portal/company/project/${projectId}`)
   }
 
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-[#f3efe6] text-[#171714]">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        body, .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+      `}</style>
 
-      {/* HEADER */}
+      <main className="min-h-screen bg-[#f8fafc] text-[#0f172a] font-jakarta selection:bg-blue-600 selection:text-white">
 
-      <header className="border-b border-[#cfc8b9] bg-[#f3efe6]">
+        {/* TOP GOV BAR */}
+        <div className="bg-[#1e3a8a] text-white px-5 py-2 text-[11px] font-medium flex justify-between items-center border-b border-blue-900">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-4 h-3 bg-orange-500 rounded-sm"></span>
+            <span className="font-medium tracking-wide text-[11px]">Ministry of Land and Infrastructure, Government of India</span>
+          </div>
+          <div className="hidden md:flex items-center gap-4 text-[11px] text-slate-300">
+            <span>Skip to main content</span>
+            <span>|</span>
+            <span>A- A A+</span>
+            <span>|</span>
+            <span>English / বাংলা</span>
+          </div>
+        </div>
 
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
-
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-3"
-          >
-
-            <div className="flex h-8 w-8 items-center justify-center border border-[#171714]">
-              <span className="font-mono text-xs">
-                D
-              </span>
-            </div>
-
-            <div className="text-left">
-
-              <p className="font-serif text-lg leading-none">
-                DHARA
-              </p>
-
-              <p className="mt-1 font-mono text-[8px] uppercase tracking-[0.16em] text-[#5d5a52]">
-                Project Authority Portal
-              </p>
-
-            </div>
-
-          </button>
-
-
-          <div className="hidden items-center gap-6 md:flex">
-
-            <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#5d5a52]">
-              <span className="h-2 w-2 rounded-full bg-[#4e7659]" />
-              Connected to DHARA
-            </div>
+        {/* MAIN NAV HEADER */}
+        <header className="border-b border-slate-200 bg-white sticky top-0 z-50 shadow-sm">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-10">
 
             <button
-              onClick={() => navigate("/signin")}
-              className="border border-[#b9b1a2] px-4 py-2 font-mono text-[9px] uppercase tracking-[0.14em] transition hover:bg-[#e9e3d7]"
+              onClick={() => navigate("/")}
+              className="flex items-center gap-3 text-left group"
             >
-              Sign out
-            </button>
-
-          </div>
-
-        </div>
-
-      </header>
-
-
-      {/* MAIN */}
-
-      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-16">
-
-        {/* TOP */}
-
-        <div className="flex flex-col gap-8 border-b border-[#cfc8b9] pb-10 md:flex-row md:items-end md:justify-between">
-
-          <div>
-
-            <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-[#b65f3c]">
-              Project Authority / Company
-            </p>
-
-            <h1 className="mt-4 max-w-3xl font-serif text-4xl leading-[0.95] md:text-6xl">
-              Your projects.
-              <br />
-              Your land requirements.
-            </h1>
-
-            <p className="mt-6 max-w-xl font-mono text-xs leading-6 text-[#5d5a52]">
-              Submit project requirements, provide supporting information
-              and follow the government-controlled land acquisition
-              workflow from one place.
-            </p>
-
-          </div>
-
-
-          <button
-            onClick={() => navigate("/portal/company/propose")}
-            className="group flex w-fit items-center gap-4 bg-[#b65f3c] px-6 py-4 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-white transition hover:bg-[#82442e]"
-          >
-
-            <Plus size={15} strokeWidth={1.5} />
-
-            Propose a project
-
-            <ArrowRight
-              size={14}
-              className="transition-transform group-hover:translate-x-1"
-            />
-
-          </button>
-
-        </div>
-
-
-        {/* STATS */}
-
-        <div className="grid grid-cols-2 border-b border-[#cfc8b9] md:grid-cols-4">
-
-          <div className="border-r border-[#cfc8b9] px-4 py-7 md:px-6">
-
-            <p className="font-serif text-4xl">
-              {totalProjects}
-            </p>
-
-            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#5d5a52]">
-              Total projects
-            </p>
-
-          </div>
-
-
-          <div className="border-b border-[#cfc8b9] px-4 py-7 md:border-b-0 md:border-r md:px-6">
-
-            <p className="font-serif text-4xl">
-              {activeProjects}
-            </p>
-
-            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#5d5a52]">
-              Active projects
-            </p>
-
-          </div>
-
-
-          <div className="border-r border-[#cfc8b9] px-4 py-7 md:px-6">
-
-            <p className="font-serif text-4xl">
-              {pendingProjects}
-            </p>
-
-            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#5d5a52]">
-              Awaiting review
-            </p>
-
-          </div>
-
-
-          <div className="px-4 py-7 md:px-6">
-
-            <p className="font-serif text-4xl">
-              DHARA
-            </p>
-
-            <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.12em] text-[#5d5a52]">
-              Connected system
-            </p>
-
-          </div>
-
-        </div>
-
-
-        {/* QUICK ACTIONS */}
-
-        <div className="mt-12">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-
-              <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-[#b65f3c]">
-                Actions
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl">
-                Project management
-              </h2>
-
-            </div>
-
-          </div>
-
-
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-
-            <button
-              onClick={() => navigate("/portal/company/propose")}
-              className="group border border-[#cfc8b9] bg-[#e9e3d7] p-6 text-left transition hover:-translate-y-1 hover:border-[#b65f3c]"
-            >
-
-              <FileText
-                size={19}
-                strokeWidth={1.2}
-                className="text-[#b65f3c]"
-              />
-
-              <h3 className="mt-8 font-serif text-2xl">
-                New proposal
-              </h3>
-
-              <p className="mt-3 font-mono text-[10px] leading-5 text-[#5d5a52]">
-                Define your project and submit the required land
-                requirement.
-              </p>
-
-              <div className="mt-6 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em]">
-                Start proposal
-                <ArrowRight
-                  size={13}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+              <div className="flex h-10 w-10 items-center justify-center bg-[#1e3a8a] text-white rounded font-bold shadow">
+                <span className="font-outfit text-lg">
+                  🇮🇳
+                </span>
               </div>
 
-            </button>
-
-
-            <button
-              onClick={() => {
-                if (projects.length > 0) {
-                  handleOpenProject(projects[0].id)
-                }
-              }}
-              className="group border border-[#cfc8b9] bg-[#e9e3d7] p-6 text-left transition hover:-translate-y-1 hover:border-[#4e7659]"
-            >
-
-              <Search
-                size={19}
-                strokeWidth={1.2}
-                className="text-[#4e7659]"
-              />
-
-              <h3 className="mt-8 font-serif text-2xl">
-                Track project
-              </h3>
-
-              <p className="mt-3 font-mono text-[10px] leading-5 text-[#5d5a52]">
-                Follow the latest administrative stage and see what
-                happens next.
-              </p>
-
-              <div className="mt-6 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em]">
-                Open latest project
-                <ArrowRight
-                  size={13}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </div>
-
-            </button>
-
-
-            <div className="border border-[#cfc8b9] bg-[#eee8dc] p-6">
-
-              <ShieldCheck
-                size={19}
-                strokeWidth={1.2}
-                className="text-[#496d91]"
-              />
-
-              <h3 className="mt-8 font-serif text-2xl">
-                Government workflow
-              </h3>
-
-              <p className="mt-3 font-mono text-[10px] leading-5 text-[#5d5a52]">
-                Your proposal is routed through the responsible
-                government authorities. Administrative decisions remain
-                with the appropriate authority.
-              </p>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* PROJECTS */}
-
-        <div className="mt-16">
-
-          <div className="flex flex-col gap-3 border-b border-[#cfc8b9] pb-5 md:flex-row md:items-end md:justify-between">
-
-            <div>
-
-              <p className="font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-[#b65f3c]">
-                Project register
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl">
-                Your submitted projects
-              </h2>
-
-            </div>
-
-            <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#77736b]">
-              {projects.length} record{projects.length === 1 ? "" : "s"}
-            </p>
-
-          </div>
-
-
-          <div className="mt-5 space-y-3">
-
-            {projects.length === 0 ? (
-
-              <div className="border border-dashed border-[#b9b1a2] px-6 py-12 text-center">
-
-                <ClipboardList
-                  size={24}
-                  strokeWidth={1.2}
-                  className="mx-auto text-[#8b857b]"
-                />
-
-                <p className="mt-5 font-serif text-2xl">
-                  No projects yet
+              <div>
+                <p className="font-outfit text-lg font-bold tracking-wide text-[#1e3a8a] leading-none">
+                  DHARA
                 </p>
-
-                <p className="mx-auto mt-3 max-w-md font-mono text-[10px] leading-5 text-[#77736b]">
-                  Submit your first project proposal to begin the
-                  government review workflow.
+                <p className="mt-1 text-[10px] font-semibold tracking-wide text-slate-500">
+                  NATIONAL LAND INFORMATION SYSTEM
                 </p>
+              </div>
+            </button>
 
+            {/* Navigation Links */}
+            <div className="hidden items-center gap-8 text-xs font-semibold tracking-wider text-slate-700 md:flex">
+              <button 
+                onClick={() => scrollToSection("project-management")} 
+                className="hover:text-[#1e3a8a] transition cursor-pointer"
+              >
+                PROJECT MANAGEMENT
+              </button>
+              <button 
+                onClick={() => scrollToSection("submitted-projects")} 
+                className="hover:text-[#1e3a8a] transition cursor-pointer"
+              >
+                SUBMITTED PROJECTS
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 text-[11px] tracking-wide text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded font-semibold">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Connected
               </div>
 
-            ) : (
+              <button
+                onClick={() => navigate("/signin")}
+                className="border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-bold tracking-wider text-slate-700 transition hover:bg-slate-200 rounded"
+              >
+                Sign Out
+              </button>
+            </div>
 
-              projects.map((project, index) => (
+          </div>
+        </header>
 
-                <motion.div
-                  key={`${project.id}-${index}`}
-                  initial={{
-                    opacity: 0,
-                    y: 10,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  transition={{
-                    delay: index * 0.05,
-                  }}
-                  className="border border-[#cfc8b9] bg-[#eee8dc] p-5 md:p-7"
+
+        {/* MAIN CONTENT CONTAINER */}
+        <div className="bg-[#f8fafc] py-12 md:py-16">
+          <div className="mx-auto max-w-7xl px-5 md:px-10">
+
+            {/* PAGE TITLE / HERO SECTION */}
+            <div className="mb-12 border-b border-slate-200 pb-8">
+              <div className="inline-block bg-blue-50 border border-blue-200 px-3 py-1 mb-4 rounded-full">
+                <p className="text-[11px] font-bold tracking-wider text-[#1e3a8a]">
+                  01 / SECURE COMPLIANCE & PORTAL HUB
+                </p>
+              </div>
+              <h1 className="font-outfit text-3xl md:text-5xl font-bold tracking-tight text-slate-900 leading-[1.1]">
+                Company Portal & <span className="text-[#1e3a8a]">Land Requirements</span>
+              </h1>
+              <p className="mt-4 text-sm md:text-base text-slate-600 max-w-2xl leading-relaxed font-medium">
+                Ensure mandatory proposal clearance before project implementation and official land acquisition takes effect across administrative tiers.
+              </p>
+
+              <div className="mt-6">
+                <button
+                  onClick={() => navigate("/portal/company/propose")}
+                  className="group inline-flex items-center gap-3 bg-blue-600 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 shadow-lg rounded-lg"
                 >
-
-                  <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
-
-                    {/* PROJECT INFO */}
-
-                    <div className="min-w-0">
-
-                      <div className="flex flex-wrap items-center gap-3">
-
-                        <span className="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-[#b65f3c]">
-                          {project.id}
-                        </span>
-
-                        <span className="h-1 w-1 rounded-full bg-[#b9b1a2]" />
-
-                        <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#77736b]">
-                          {project.status || "Pending"}
-                        </span>
-
-                      </div>
+                  <Plus size={16} strokeWidth={2.5} />
+                  Propose a Project
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+            </div>
 
 
-                      <h3 className="mt-4 font-serif text-2xl md:text-3xl">
-                        {project.projectName || project.name}
-                      </h3>
+            {/* STATS OVERVIEW SECTION */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+              <div className="border border-slate-200 bg-white p-6 shadow-sm rounded-xl border-t-4 border-t-blue-600">
+                <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Active Projects</p>
+                <p className="mt-2 font-outfit text-4xl font-bold text-slate-900">{totalProjects}</p>
+              </div>
+              <div className="border border-slate-200 bg-white p-6 shadow-sm rounded-xl border-t-4 border-t-emerald-600">
+                <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Active Submissions</p>
+                <p className="mt-2 font-outfit text-4xl font-bold text-slate-900">{activeProjects}</p>
+              </div>
+              <div className="border border-slate-200 bg-white p-6 shadow-sm rounded-xl border-t-4 border-t-amber-500">
+                <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">Pending Review</p>
+                <p className="mt-2 font-outfit text-4xl font-bold text-slate-900">{pendingProjects}</p>
+              </div>
+            </div>
 
 
-                      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[9px] uppercase tracking-[0.08em] text-[#5d5a52]">
+            {/* QUICK ACTIONS MODULE */}
+            <div id="project-management" className="mb-16 scroll-mt-24">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-[#1e3a8a]">
+                  02 / AVAILABLE ACTIONS
+                </p>
+                <h2 className="mt-1 font-outfit text-3xl font-bold text-slate-900">
+                  Project Management & Workflows
+                </h2>
+              </div>
 
-                        <span className="flex items-center gap-2">
-                          <MapPin size={12} />
-                          {project.location ||
-                            `${project.district || "District"}, ${
-                              project.state || "State"
-                            }`}
-                        </span>
-
-                        <span>
-                          {project.landArea
-                            ? `${project.landArea} acres`
-                            : project.land}
-                        </span>
-
-                        <span>
-                          {project.parcels} parcels
-                        </span>
-
-                      </div>
-
-                    </div>
-
-
-                    {/* STAGE + ACTION */}
-
-                    <div className="flex flex-col gap-5 border-t border-[#cfc8b9] pt-5 lg:min-w-[330px] lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
-
-                      <div>
-
-                        <p className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#77736b]">
-                          Current stage
-                        </p>
-
-                        <p className="mt-2 font-serif text-xl">
-                          {project.stage || "Proposal Submitted"}
-                        </p>
-
-                      </div>
-
-
-                      <button
-                        onClick={() =>
-                          handleOpenProject(project.id)
-                        }
-                        className="group flex w-full items-center justify-between border border-[#171714] bg-[#171714] px-5 py-3.5 font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-[#f3efe6] transition hover:bg-[#b65f3c] hover:border-[#b65f3c]"
-                      >
-
-                        <span>
-                          Track project
-                        </span>
-
-                        <ArrowRight
-                          size={14}
-                          className="transition-transform group-hover:translate-x-1"
-                        />
-
-                      </button>
-
-                    </div>
-
+              <div className="mt-6 grid gap-6 md:grid-cols-3">
+                <button
+                  onClick={() => navigate("/portal/company/propose")}
+                  className="group text-left border border-slate-200 bg-white p-6 transition hover:shadow-md hover:border-blue-400 rounded-xl shadow-sm"
+                >
+                  <FileText size={22} className="text-[#1e3a8a]" />
+                  <h3 className="mt-4 font-outfit text-xl font-bold text-slate-900">New Proposal</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 font-medium">
+                    Submit land requirements and initiate official digital project proposals.
+                  </p>
+                  <div className="mt-4 flex items-center gap-2 text-xs font-bold tracking-wider text-[#1e3a8a]">
+                    Start filing <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
                   </div>
+                </button>
 
-                </motion.div>
+                <button
+                  onClick={() => {
+                    if (projects.length > 0) handleOpenProject(projects[0].id)
+                  }}
+                  className="group text-left border border-slate-200 bg-white p-6 transition hover:shadow-md hover:border-emerald-400 rounded-xl shadow-sm"
+                >
+                  <Search size={22} className="text-emerald-600" />
+                  <h3 className="mt-4 font-outfit text-xl font-bold text-slate-900">Track Project</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 font-medium">
+                    Follow government review stages, document verifications, and approvals.
+                  </p>
+                  <div className="mt-4 flex items-center gap-2 text-xs font-bold tracking-wider text-emerald-600">
+                    Open latest status <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+                  </div>
+                </button>
 
-              ))
+                <div className="border border-slate-200 bg-white p-6 rounded-xl shadow-sm">
+                  <ShieldCheck size={22} className="text-indigo-600" />
+                  <h3 className="mt-4 font-outfit text-xl font-bold text-slate-900">Government Workflow</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 font-medium">
+                    Proposals are securely routed through authorized state and district departments.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            )}
 
-          </div>
+            {/* PROJECTS REGISTER */}
+            <div id="submitted-projects" className="scroll-mt-24">
+              <div className="flex flex-col gap-2 border-b border-slate-300 pb-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-[11px] font-bold tracking-wider text-[#1e3a8a]">
+                    03 / PROJECT REGISTER
+                  </p>
+                  <h2 className="mt-1 font-outfit text-3xl font-bold text-slate-900">
+                    Your Submitted Projects
+                  </h2>
+                </div>
+                <p className="text-xs uppercase tracking-wider text-slate-600 font-bold">
+                  Total Records: {projects.length}
+                </p>
+              </div>
 
-        </div>
+              <div className="mt-6 space-y-4">
+                {projects.length === 0 ? (
+                  <div className="border border-dashed border-slate-300 bg-white px-6 py-16 text-center rounded-xl shadow-sm">
+                    <ClipboardList size={32} className="mx-auto text-slate-400" />
+                    <p className="mt-4 font-outfit text-2xl font-bold text-slate-900">
+                      No projects submitted yet
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 font-medium leading-relaxed">
+                      Submit your first project proposal to begin the official government land acquisition workflow.
+                    </p>
+                    <button
+                      onClick={() => navigate("/portal/company/propose")}
+                      className="mt-6 inline-flex items-center gap-2 bg-[#1e3a8a] px-5 py-2.5 text-xs uppercase tracking-wider text-white hover:bg-blue-800 rounded-lg shadow font-bold"
+                    >
+                      <Plus size={14} /> Propose First Project
+                    </button>
+                  </div>
+                ) : (
+                  projects.map((project, index) => (
+                    <motion.div
+                      key={`${project.id}-${index}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="border border-slate-200 bg-white p-6 md:p-7 rounded-xl shadow-sm hover:border-slate-300 transition"
+                    >
+                      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-xs font-bold tracking-wider text-[#1e3a8a] bg-blue-50 px-2.5 py-1 border border-blue-200 rounded">
+                              {project.id}
+                            </span>
+                            <span className="h-1 w-1 rounded-full bg-slate-400" />
+                            <span className="text-xs font-bold tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 border border-amber-200 rounded">
+                              {project.status || "Pending Verification"}
+                            </span>
+                          </div>
 
+                          <h3 className="mt-3 font-outfit text-2xl md:text-3xl font-bold text-slate-900">
+                            {project.projectName || project.name}
+                          </h3>
 
-        {/* SYSTEM NOTE */}
+                          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600 font-medium">
+                            <span className="flex items-center gap-1.5 text-[#1e3a8a] font-semibold">
+                              <MapPin size={13} />
+                              {project.location || `${project.district || "District"}, ${project.state || "State"}`}
+                            </span>
+                            <span>•</span>
+                            <span>Land Area: {project.landArea ? `${project.landArea} acres` : project.land}</span>
+                            <span>•</span>
+                            <span>Parcels: {project.parcels || 1}</span>
+                          </div>
+                        </div>
 
-        <div className="mt-16 border-l-2 border-[#b65f3c] bg-[#e9e3d7] px-6 py-6 md:px-8">
+                        <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 lg:min-w-[280px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+                              Current Stage
+                            </p>
+                            <p className="mt-1 font-outfit text-lg text-slate-900 font-bold">
+                              {project.stage || "Proposal Submitted"}
+                            </p>
+                          </div>
 
-          <div className="flex gap-4">
+                          <button
+                            onClick={() => handleOpenProject(project.id)}
+                            className="group flex w-full items-center justify-between border border-[#1e3a8a] bg-[#1e3a8a] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-800 rounded-lg shadow-sm"
+                          >
+                            <span>Track Status</span>
+                            <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                          </button>
+                        </div>
 
-            <ShieldCheck
-              size={18}
-              strokeWidth={1.2}
-              className="mt-1 shrink-0 text-[#b65f3c]"
-            />
-
-            <div>
-
-              <p className="font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-[#b65f3c]">
-                System responsibility
-              </p>
-
-              <p className="mt-3 max-w-3xl font-mono text-[10px] leading-6 text-[#514b43]">
-                Companies initiate project proposals and define their
-                land requirements. Review, verification, approval,
-                acquisition and subsequent administrative actions are
-                performed by the responsible government authorities.
-                DHARA connects these stages without transferring
-                government authority to the company.
-              </p>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
 
             </div>
 
+
+            {/* SYSTEM NOTICE */}
+            <div className="mt-16 border-l-4 border-[#1e3a8a] bg-white p-6 md:p-8 rounded-r-xl border border-slate-200 shadow-sm">
+              <div className="flex gap-4 items-start">
+                <ShieldCheck size={22} className="mt-0.5 shrink-0 text-[#1e3a8a]" />
+                <div>
+                  <p className="text-xs font-bold tracking-wider text-[#1e3a8a]">
+                    Official Compliance Notice
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700 font-medium leading-relaxed">
+                    Companies initiate project proposals and define their required land metrics. Official reviews, verifications, statutory approvals, and subsequent administrative land acquisition actions remain strictly under the authority of designated government departments.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+
+            {/* BACK LINK */}
+            <button
+              onClick={() => navigate("/")}
+              className="mt-10 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-700 hover:text-[#1e3a8a] transition"
+            >
+              <ArrowLeft size={14} /> Return to DHARA Portal Hub
+            </button>
+
           </div>
-
         </div>
 
 
-        {/* BACK */}
+        {/* FOOTER */}
+        <footer className="border-t border-slate-900 bg-[#0f172a] px-5 py-8 md:px-10 text-xs text-slate-400">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <p>© 2026 Ministry of Land and Infrastructure, Government of India. All rights reserved.</p>
+            <div className="flex items-center gap-6 uppercase tracking-wider font-bold text-[11px]">
+              <span>Privacy Policy</span>
+              <span>Terms of Use</span>
+              <span>Help Desk</span>
+            </div>
+          </div>
+        </footer>
 
-        <button
-          onClick={() => navigate("/")}
-          className="mt-10 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.14em] text-[#5d5a52] transition hover:text-[#b65f3c]"
-        >
-
-          <ArrowLeft size={13} />
-
-          Back to DHARA
-
-        </button>
-
-      </section>
-
-
-      {/* FOOTER */}
-
-      <footer className="border-t border-[#cfc8b9] px-5 py-7 md:px-10">
-
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 font-mono text-[8px] uppercase tracking-[0.14em] text-[#77736b] md:flex-row md:items-center md:justify-between">
-
-          <span>
-            DHARA / Project Authority Portal
-          </span>
-
-          <span>
-            Government-connected land workflow
-          </span>
-
-          <span>
-            Prototype / 2026
-          </span>
-
-        </div>
-
-      </footer>
-
-    </main>
+      </main>
+    </>
   )
 }
 
