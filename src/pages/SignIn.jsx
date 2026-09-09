@@ -167,11 +167,15 @@ function SignIn() {
 
     setResetBusy(true)
     try {
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000)
       const response = await fetch(`${API_BASE_URL}/api/password-reset/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       })
+      window.clearTimeout(timeoutId)
       const data = await response.json()
       if (!response.ok || !data.success) {
         alert(data.message || "Password reset request failed.")
@@ -182,7 +186,9 @@ function SignIn() {
       alert("OTP has been sent to your authorized email.")
     } catch (error) {
       console.error("Password reset request error:", error)
-      alert("Unable to send OTP. Please try again.")
+      alert(error.name === "AbortError"
+        ? "OTP service timed out. Please check the SMTP settings and try again."
+        : "Unable to send OTP. Please try again.")
     } finally {
       setResetBusy(false)
     }
