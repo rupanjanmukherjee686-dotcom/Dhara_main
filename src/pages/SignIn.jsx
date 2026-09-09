@@ -59,7 +59,7 @@ const portalRoles = [
   },
   {
     id: "citizen",
-    label: "Citizen",
+    label: "Landowner",
     description: "View land, compensation and project status",
     type: "external",
     path: "/portal/citizen",
@@ -203,7 +203,7 @@ function SignIn() {
     }
 
     // ========================================
-    // COMPANY / CITIZEN EMAIL SIGNUP OR SIGNIN
+    // COMPANY / LANDOWNER EMAIL SIGNUP OR SIGNIN
     // ========================================
     if (isSignUpMode && !name) return;
     if (!identifier || !password) return
@@ -715,8 +715,8 @@ function SignIn() {
                   {isGovernment
                     ? "Government access is restricted by administrative role. Each official can access only the functions assigned to their authority level."
                     : isSignUpMode
-                    ? "Register your company or citizen credentials securely into the platform database."
-                    : "Company and citizen accounts use verified email credentials and CAPTCHA authentication before access is granted."}
+                    ? "Register your company or landowner credentials securely into the platform database."
+                    : "Company and landowner accounts use verified email credentials and CAPTCHA authentication before access is granted."}
                 </div>
 
               </form>

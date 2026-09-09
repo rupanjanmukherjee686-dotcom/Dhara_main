@@ -496,12 +496,12 @@ export default function CompensationDashboard() {
             stage: "Compensation",
 
             status:
-              "Compensation Paid — Citizen Acknowledgement Pending",
+              "Compensation Paid — Landowner Acknowledgement Pending",
 
             authority: "SLCO",
 
             nextAction:
-              "Citizen Acknowledgement",
+              "Landowner Acknowledgement",
 
             /* APPROVAL REMAINS COMPLETED */
 
@@ -548,7 +548,7 @@ export default function CompensationDashboard() {
                 "COMPENSATION_PAID",
 
               message:
-                "Compensation has been approved and payment has been recorded. Please acknowledge receipt in the Citizen Portal.",
+                "Compensation has been approved and payment has been recorded. Please acknowledge receipt in the Landowner Portal.",
 
               createdAt:
                 paidAt,
@@ -561,7 +561,7 @@ export default function CompensationDashboard() {
                 "COMPENSATION_PAID",
 
               message:
-                "Compensation payment has been recorded. Citizen acknowledgement is pending before implementation.",
+                "Compensation payment has been recorded. Landowner acknowledgement is pending before implementation.",
 
               createdAt:
                 paidAt,
@@ -636,7 +636,7 @@ export default function CompensationDashboard() {
             "Locked",
 
           nextStage:
-            "Citizen Acknowledgement",
+            "Landowner Acknowledgement",
         },
       })
 
@@ -1431,7 +1431,7 @@ export default function CompensationDashboard() {
 
                           Recording payment creates Block #8.
                           The project remains in Compensation until
-                          the citizen acknowledges receipt.
+                          the landowner acknowledges receipt.
 
                         </p>
 
@@ -1488,7 +1488,7 @@ export default function CompensationDashboard() {
 
                       <p className="text-sm leading-6 text-[var(--ink-soft)]">
                         Implementation remains locked until
-                        compensation is paid and the citizen
+                        compensation is paid and the landowner
                         acknowledges receipt.
                       </p>
 
@@ -1531,7 +1531,7 @@ export default function CompensationDashboard() {
                       <div className="flex items-center justify-between">
 
                         <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--ink-soft)]">
-                          Citizen acknowledgement
+                          Landowner acknowledgement
                         </span>
 
                         <span className="font-mono text-[9px] uppercase tracking-[0.1em]">
@@ -1621,11 +1621,11 @@ export default function CompensationDashboard() {
 
                         {decisionType ===
                         "approved"
-                          ? "The compensation decision has been recorded by the SLCO. Payment is now the next permitted workflow action. Citizen acknowledgement and implementation remain locked."
+                          ? "The compensation decision has been recorded by the SLCO. Payment is now the next permitted workflow action. Landowner acknowledgement and implementation remain locked."
                           : decisionType ===
                             "paid"
-                          ? "Compensation payment has been recorded. The citizen has now been notified and must acknowledge receipt before the project becomes eligible for government implementation."
-                          : "The compensation review has been placed on hold. Payment, citizen acknowledgement, and implementation remain locked until the SLCO resumes and resolves the review."}
+                          ? "Compensation payment has been recorded. The landowner has now been notified and must acknowledge receipt before the project becomes eligible for government implementation."
+                          : "The compensation review has been placed on hold. Payment, landowner acknowledgement, and implementation remain locked until the SLCO resumes and resolves the review."}
 
                       </p>
 
@@ -1672,7 +1672,7 @@ export default function CompensationDashboard() {
                         <div className="bg-[var(--paper)] p-4">
 
                           <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-                            Citizen
+                            Landowner
                           </p>
 
                           <p className="mt-2 font-mono text-[10px] uppercase">
@@ -1739,12 +1739,12 @@ export default function CompensationDashboard() {
                               </p>
 
                               <p className="mt-2 font-serif text-xl">
-                                Citizen Acknowledgement
+                                Landowner Acknowledgement
                               </p>
 
                               <p className="mt-2 font-mono text-[10px] leading-5 text-[var(--ink-soft)]">
-                                The citizen can now open the
-                                Citizen Portal, review the paid
+                                The landowner can now open the
+                                Landowner Portal, review the paid
                                 compensation record, and
                                 acknowledge receipt.
                               </p>
@@ -1840,7 +1840,7 @@ export default function CompensationDashboard() {
                     </strong>
                     .
 
-                    {" "}After payment, the citizen receives a
+                    {" "}After payment, the landowner receives a
                     notification and can acknowledge compensation.
                     Only after that acknowledgement does the project
                     become eligible for government implementation.

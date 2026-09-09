@@ -38,7 +38,7 @@ const fallbackProjects = [
     implementationStatus: "Implementation Locked",
     parcelStatus: "Affected",
     surveyNumber: "WB-KOL-2048-17",
-    landHolder: "Citizen Record",
+    landHolder: "Landowner Record",
     compensationAmount: "₹8,40,000",
     compensationUpdatedAt: "02 Sep 2026",
     dharaReference: "DH-WB-2026-2048",
@@ -62,7 +62,7 @@ const fallbackProjects = [
     implementationStatus: "Implementation Locked",
     parcelStatus: "Affected",
     surveyNumber: "MH-PUN-7731-08",
-    landHolder: "Citizen Record",
+    landHolder: "Landowner Record",
     compensationAmount: "₹6,75,000",
     compensationUpdatedAt: "31 Aug 2026",
     dharaReference: "DH-MH-2026-7731",
@@ -86,7 +86,7 @@ const fallbackProjects = [
     implementationStatus: "Not Eligible",
     parcelStatus: "Under Review",
     surveyNumber: "OD-KHD-0912-04",
-    landHolder: "Citizen Record",
+    landHolder: "Landowner Record",
     compensationAmount: "—",
     compensationUpdatedAt: "—",
     dharaReference: "DH-OD-2026-0912",
@@ -375,7 +375,7 @@ function CitizenDashboard() {
                 </p>
 
                 <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-[var(--ink-soft)] mt-1">
-                  Citizen Portal
+                  Landowner Portal
                 </p>
               </div>
             </div>
@@ -394,7 +394,7 @@ function CitizenDashboard() {
 
               <div className="hidden sm:block text-right">
                 <p className="font-mono text-[9px] uppercase tracking-[0.16em]">
-                  Citizen Access
+                  Landowner Access
                 </p>
 
                 <p className="font-mono text-[8px] text-[var(--ink-soft)] mt-1">
@@ -426,7 +426,7 @@ function CitizenDashboard() {
 
             <div>
               <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[var(--earth)] mb-3">
-                Secure Citizen Record Access
+                Secure Landowner Record Access
               </p>
 
               <h1 className="font-serif text-4xl md:text-5xl leading-tight">
@@ -450,7 +450,7 @@ function CitizenDashboard() {
               </p>
 
               <p className="font-mono text-[8px] text-[var(--ink-soft)] mt-1">
-                Verified citizen record
+                  Verified landowner record
               </p>
             </div>
 
@@ -582,7 +582,7 @@ function CitizenDashboard() {
                       <p className="font-mono text-[9px] leading-5 text-[var(--ink-soft)]">
                         DHARA reveals only a record that matches all
                         required notice details. Knowing a project ID
-                        alone does not provide citizen access.
+                        alone does not provide landowner access.
                       </p>
                     </div>
 
@@ -1062,7 +1062,7 @@ function CitizenDashboard() {
                                 Compensation information is maintained
                                 by the authorized government authority
                                 against the existing project and parcel
-                                record. No separate citizen compensation
+                                record. No separate landowner compensation
                                 application is required through DHARA.
                               </p>
 
@@ -1231,7 +1231,7 @@ function CitizenDashboard() {
                           <div>
 
                             <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--earth)]">
-                              Citizen visibility
+                              Landowner visibility
                             </p>
 
                             <h3 className="font-serif text-lg mt-1">
@@ -1243,7 +1243,7 @@ function CitizenDashboard() {
                               compensation and implementation states
                               connected so that changes made by authorized
                               government authorities are reflected in the
-                              citizen view.
+                              landowner view.
                             </p>
 
                           </div>
@@ -1274,7 +1274,7 @@ function CitizenDashboard() {
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
           <p className="font-mono text-[8px] uppercase tracking-[0.15em] text-[var(--ink-soft)]">
-            DHARA / Citizen Land Intelligence
+            DHARA / Landowner Land Intelligence
           </p>
 
           <p className="font-mono text-[8px] text-[var(--ink-soft)]">

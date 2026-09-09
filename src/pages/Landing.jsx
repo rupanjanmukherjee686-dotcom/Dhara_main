@@ -193,7 +193,7 @@ const portals = [
     id: "citizen",
     number: "03",
     label: "PUBLIC ACCESS",
-    title: "Citizen",
+    title: "Landowner",
     description: "A simpler public-facing view helping people understand what is happening with their land.",
     question: "What happens to my land?",
     metrics: [
@@ -538,7 +538,7 @@ export default function Landing() {
                   Different roles. <br />One national system.
                 </h2>
                 <p className="mt-8 max-w-xl text-sm leading-relaxed text-slate-600 font-medium md:text-base">
-                  Companies initiate projects, government authorities manage the administrative lifecycle, and citizens access transparent land status.
+                  Companies initiate projects, government authorities manage the administrative lifecycle, and landowners access transparent land status.
                 </p>
               </div>
             </div>
