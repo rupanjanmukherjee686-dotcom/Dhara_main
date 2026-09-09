@@ -54,6 +54,9 @@ const projectSchema = new mongoose.Schema({
     landBankStatus: { type: String, default: 'Unchecked' },   // Available, Not Found
     gisRequired: { type: Boolean, default: false },            // True hobe jodi Land Bank-e jomi na paoya jay
     actComplianceChecked: { type: Boolean, default: false },   // LARR Act 2013 & WB Land Reforms Act compliance
+    reviewChecks: { type: mongoose.Schema.Types.Mixed, default: {} },
+    screeningScore: { type: Number, default: 0 },
+    screeningLabel: { type: String, default: '' },
     stateRemarks: { type: String, default: '' },
     
     // Forwarding Status
@@ -187,6 +190,9 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
             landBankStatus, 
             gisRequired, 
             actComplianceChecked, 
+            reviewChecks,
+            screeningScore,
+            screeningLabel,
             stateRemarks,
             currentStage 
         } = req.body;
@@ -200,6 +206,9 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
         project.landBankStatus = landBankStatus !== undefined ? landBankStatus : project.landBankStatus;
         project.gisRequired = gisRequired !== undefined ? gisRequired : project.gisRequired;
         project.actComplianceChecked = actComplianceChecked !== undefined ? actComplianceChecked : project.actComplianceChecked;
+        project.reviewChecks = reviewChecks !== undefined ? reviewChecks : project.reviewChecks;
+        project.screeningScore = screeningScore !== undefined ? screeningScore : project.screeningScore;
+        project.screeningLabel = screeningLabel !== undefined ? screeningLabel : project.screeningLabel;
         project.stateRemarks = stateRemarks !== undefined ? stateRemarks : project.stateRemarks;
         project.currentStage = currentStage !== undefined ? currentStage : project.currentStage;
 

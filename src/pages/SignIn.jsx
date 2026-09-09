@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { startSession } from "../auth"
+import { API_BASE_URL } from "../api"
 
 const portalRoles = [
   {
@@ -163,7 +165,7 @@ function SignIn() {
       if (!identifier || !password) return
 
       try {
-        const response = await fetch('https://dhara-main.onrender.com/api/officer/signin', {
+        const response = await fetch(`${API_BASE_URL}/api/officer/signin`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -187,6 +189,7 @@ function SignIn() {
         }
 
         setVerified(true)
+        startSession(selectedRole, identifier)
         setTimeout(() => {
           if (selectedPortal?.path) {
             navigate(selectedPortal.path)
@@ -220,7 +223,7 @@ function SignIn() {
     try {
       if (isSignUpMode) {
         // Step A: Register the user if it's Sign-Up mode
-        const signupResponse = await fetch('https://dhara-main.onrender.com/api/signup', {
+        const signupResponse = await fetch(`${API_BASE_URL}/api/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email: identifier, password }),
@@ -246,7 +249,7 @@ function SignIn() {
       }
 
       // Step B: Authenticate and sign in the user
-      const loginResponse = await fetch('https://dhara-main.onrender.com/api/signin', {
+      const loginResponse = await fetch(`${API_BASE_URL}/api/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: identifier, password }),
@@ -267,6 +270,7 @@ function SignIn() {
 
       // Save user email to localStorage for dynamic project fetching
       localStorage.setItem('userEmail', identifier);
+      startSession(selectedRole, identifier)
 
       setVerified(true)
       setTimeout(() => {

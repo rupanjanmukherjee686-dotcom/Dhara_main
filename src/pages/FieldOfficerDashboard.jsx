@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { clearSession } from "../auth"
 
 function FieldOfficerDashboard() {
   const navigate = useNavigate()
@@ -52,7 +53,10 @@ function FieldOfficerDashboard() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
 
           <button
-            onClick={() => navigate("/signin")}
+            onClick={() => {
+              clearSession()
+              navigate("/signin", { replace: true })
+            }}
             className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-[var(--ink-soft)] transition hover:text-[var(--earth)]"
           >
             <ArrowLeft size={14} />

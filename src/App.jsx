@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
+import { LogOut } from "lucide-react"
+import { clearSession, hasSession } from "./auth"
 
 import Landing from "./pages/Landing"
 import SignIn from "./pages/SignIn"
@@ -29,6 +31,39 @@ import CentralProjectReview from "./pages/CentralProjectReview"
 // ================= CITIZEN =================
 import CitizenDashboard from "./pages/CitizenDashboard"
 
+function ProtectedPortal({ children }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  if (!hasSession()) {
+    return <Navigate to="/signin" replace state={{ from: location.pathname }} />
+  }
+
+  const handleSignOut = () => {
+    clearSession()
+    navigate("/signin", { replace: true })
+  }
+
+  return (
+    <>
+      {children}
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="fixed bottom-5 right-5 z-[1000] flex items-center gap-2 rounded-lg bg-rose-700 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg transition hover:bg-rose-800"
+        title="Sign out of this portal"
+      >
+        <LogOut size={15} />
+        Sign Out
+      </button>
+    </>
+  )
+}
+
+function ProtectedRoute({ children }) {
+  return <ProtectedPortal>{children}</ProtectedPortal>
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -54,22 +89,22 @@ function App() {
 
         <Route
           path="/portal/company"
-          element={<CompanyDashboard />}
+          element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/company/propose"
-          element={<ProjectProposal />}
+          element={<ProtectedRoute><ProjectProposal /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/company/project/:projectId"
-          element={<ProjectTracking />}
+          element={<ProtectedRoute><ProjectTracking /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/company/project/:projectId/revise"
-          element={<CompanyRevision />}
+          element={<ProtectedRoute><CompanyRevision /></ProtectedRoute>}
         />
 
         {/* =====================================================
@@ -78,17 +113,17 @@ function App() {
 
         <Route
           path="/portal/district"
-          element={<DistrictDashboard />}
+          element={<ProtectedRoute><DistrictDashboard /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/district/proposal/:projectId"
-          element={<ProposalReview />}
+          element={<ProtectedRoute><ProposalReview /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/district/field-review/:projectId"
-          element={<DistrictFieldReview />}
+          element={<ProtectedRoute><DistrictFieldReview /></ProtectedRoute>}
         />
 
         {/* =====================================================
@@ -97,12 +132,12 @@ function App() {
 
         <Route
           path="/portal/field"
-          element={<FieldOfficerDashboard />}
+          element={<ProtectedRoute><FieldOfficerDashboard /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/field/project/:projectId"
-          element={<FieldVerification />}
+          element={<ProtectedRoute><FieldVerification /></ProtectedRoute>}
         />
 
         {/* =====================================================
@@ -111,12 +146,12 @@ function App() {
 
         <Route
           path="/portal/state"
-          element={<StateDashboard />}
+          element={<ProtectedRoute><StateDashboard /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/state/project/:projectId"
-          element={<StateProjectReview />}
+          element={<ProtectedRoute><StateProjectReview /></ProtectedRoute>}
         />
 
         {/* =====================================================
@@ -125,12 +160,12 @@ function App() {
 
         <Route
           path="/portal/central"
-          element={<CentralDashboard />}
+          element={<ProtectedRoute><CentralDashboard /></ProtectedRoute>}
         />
 
         <Route
           path="/portal/central/project/:projectId"
-          element={<CentralProjectReview />}
+          element={<ProtectedRoute><CentralProjectReview /></ProtectedRoute>}
         />
 
         {/* =====================================================
@@ -139,7 +174,7 @@ function App() {
 
         <Route
           path="/portal/citizen"
-          element={<CitizenDashboard />}
+          element={<ProtectedRoute><CitizenDashboard /></ProtectedRoute>}
         />
 
       </Routes>

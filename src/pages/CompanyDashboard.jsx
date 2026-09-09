@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { API_BASE_URL } from "../api"
+import { clearSession } from "../auth"
 
 function CompanyDashboard() {
   const navigate = useNavigate()
@@ -147,7 +148,10 @@ function CompanyDashboard() {
               </div>
 
               <button
-                onClick={() => navigate("/signin")}
+                onClick={() => {
+                  clearSession()
+                  navigate("/signin", { replace: true })
+                }}
                 className="border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-bold tracking-wider text-slate-700 transition hover:bg-slate-200 rounded"
               >
                 Sign Out

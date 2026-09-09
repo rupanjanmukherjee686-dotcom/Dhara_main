@@ -1,22 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { motion } from "framer-motion";
 import {
-  ArrowRight,
   ArrowUpRight,
-  CheckCircle2,
-  Crosshair,
-  Landmark,
   MapPin,
-  Shield,
-  Users,
-  ChevronLeft,
-  ChevronRight,
   Activity,
-  Layers,
   FileText,
-  AlertCircle
 } from "lucide-react";
 import { API_BASE_URL } from "../api";
+import { Circle, CircleMarker, MapContainer, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+
+const REVIEW_CHECKS = [
+  { key: "companyDetails", label: "Company identity and registration details verified" },
+  { key: "projectDetails", label: "Project scope, cost, employment and timeline verified" },
+  { key: "landDetails", label: "Land requirement, location and parcel details verified" },
+  { key: "landCharacteristics", label: "Agricultural, irrigation and crop details verified" },
+  { key: "acquisitionDetails", label: "Acquisition purpose, affected families and funding verified" },
+  { key: "documents", label: "Submitted supporting documents checked" },
+  { key: "actCompliance", label: "LARR Act 2013 and applicable state law compliance verified" },
+]
+
+function parseCoordinates(value) {
+  const matches = String(value || "").match(/-?\d+(?:\.\d+)?/g)
+  if (!matches || matches.length < 2) return null
+
+  const latitude = Number(matches[0])
+  const longitude = Number(matches[1])
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null
+  return [latitude, longitude]
+}
+
+function getScreeningResult(proposal, checks) {
+  const coordinates = parseCoordinates(proposal?.longitudeLatitude)
+  const checksPassed = Object.values(checks).filter(Boolean).length
+  const score = Math.round(
+    (coordinates ? 25 : 0) +
+    (proposal?.preferredState ? 15 : 0) +
+    (proposal?.district ? 15 : 0) +
+    (proposal?.totalLandRequired ? 15 : 0) +
+    (proposal?.landUnit ? 5 : 0) +
+    (proposal?.surveyPlotNumbers ? 10 : 0) +
+    (proposal?.documents?.length ? 5 : 0) +
+    (checksPassed / REVIEW_CHECKS.length) * 10
+  )
+
+  return {
+    coordinates,
+    score,
+    label: score >= 80 ? "Suitable for state review" : score >= 55 ? "Needs field verification" : "Insufficient location data",
+  }
+}
 
 export default function StateDashboard() {
   const [proposals, setProposals] = useState([]);
@@ -30,22 +63,25 @@ export default function StateDashboard() {
   const [gisRequired, setGisRequired] = useState(false);
   const [actComplianceChecked, setActComplianceChecked] = useState(false);
   const [stateRemarks, setStateRemarks] = useState('');
+  const [reviewChecks, setReviewChecks] = useState({});
 
   useEffect(() => {
-    fetchProposals();
+    fetch(`${API_BASE_URL}/api/state/proposals`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) setProposals(data.proposals);
+      })
+      .catch((err) => console.error("Error fetching proposals:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   const fetchProposals = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/state/proposals`);
       const data = await response.json();
-      if (data.success) {
-        setProposals(data.proposals);
-      }
+      if (data.success) setProposals(data.proposals);
     } catch (err) {
       console.error("Error fetching proposals:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -56,6 +92,11 @@ export default function StateDashboard() {
     setGisRequired(prop.gisRequired || false);
     setActComplianceChecked(prop.actComplianceChecked || false);
     setStateRemarks(prop.stateRemarks || '');
+    setReviewChecks({
+      ...Object.fromEntries(REVIEW_CHECKS.map(({ key }) => [key, false])),
+      ...(prop.reviewChecks || {}),
+      actCompliance: prop.actComplianceChecked || prop.reviewChecks?.actCompliance || false,
+    });
   };
 
   const handleLandBankChange = (status) => {
@@ -65,6 +106,11 @@ export default function StateDashboard() {
     } else {
       setGisRequired(false);
     }
+  };
+
+  const updateReviewCheck = (key, value) => {
+    setReviewChecks((current) => ({ ...current, [key]: value }));
+    if (key === 'actCompliance') setActComplianceChecked(value);
   };
 
   const handleScrutinySubmit = async (e) => {
@@ -81,6 +127,9 @@ export default function StateDashboard() {
           landBankStatus,
           gisRequired,
           actComplianceChecked,
+          reviewChecks,
+          screeningScore: getScreeningResult(selectedProposal, reviewChecks).score,
+          screeningLabel: getScreeningResult(selectedProposal, reviewChecks).label,
           stateRemarks,
           currentStage: stateScrutinyStatus === 'Verified' ? 'Forwarded to District & Central' : 'State Scrutiny In Progress'
         })
@@ -101,6 +150,11 @@ export default function StateDashboard() {
       setSubmitting(false);
     }
   };
+
+  const screeningResult = selectedProposal
+    ? getScreeningResult(selectedProposal, reviewChecks)
+    : null;
+  const allChecksPassed = REVIEW_CHECKS.every(({ key }) => reviewChecks[key]);
 
   if (loading) {
     return (
@@ -248,6 +302,63 @@ export default function StateDashboard() {
                     <div><span className="font-semibold text-slate-500">District:</span> <p className="font-bold text-slate-800 mt-0.5">{selectedProposal.district || 'N/A'}</p></div>
                   </div>
 
+                  <details open className="rounded-lg border border-slate-200 bg-white">
+                    <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">
+                      Open full company, project, land and document data
+                    </summary>
+                    <div className="grid gap-3 border-t border-slate-200 p-4 sm:grid-cols-2">
+                      {Object.entries(selectedProposal)
+                        .filter(([key, value]) => !['_id', '__v', 'reviewChecks', 'stateRemarks', 'documents'].includes(key) && value !== '' && value !== null && value !== undefined)
+                        .map(([key, value]) => (
+                          <div key={key} className="rounded border border-slate-100 bg-slate-50 p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{key.replaceAll(/([A-Z])/g, ' $1')}</p>
+                            <p className="mt-1 break-words text-xs font-semibold text-slate-800">{String(value)}</p>
+                          </div>
+                        ))}
+                      <div className="rounded border border-slate-100 bg-slate-50 p-3 sm:col-span-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Submitted documents</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-800">
+                          {selectedProposal.documents?.length
+                            ? selectedProposal.documents.map((document) => document.name).join(', ')
+                            : 'No documents listed'}
+                        </p>
+                      </div>
+                    </div>
+                  </details>
+
+                  <div className="grid gap-4 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 md:grid-cols-[1fr_1.4fr]">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">GIS suitability screening</p>
+                      <p className="mt-2 font-outfit text-3xl font-bold text-slate-900">{screeningResult?.score || 0}<span className="text-sm text-slate-500"> / 100</span></p>
+                      <p className="mt-1 text-xs font-semibold text-emerald-800">{screeningResult?.label}</p>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-600">Screening uses the submitted location and completeness signals. Final land suitability still requires official GIS layers and field verification.</p>
+                    </div>
+                    {screeningResult?.coordinates ? (
+                      <div className="h-52 overflow-hidden rounded-lg border border-emerald-200">
+                        <MapContainer center={screeningResult.coordinates} zoom={12} scrollWheelZoom={false} className="h-full w-full">
+                          <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          <Circle center={screeningResult.coordinates} radius={1000} pathOptions={{ color: '#059669', fillColor: '#10b981', fillOpacity: 0.2 }} />
+                          <CircleMarker center={screeningResult.coordinates} radius={8} pathOptions={{ color: '#065f46', fillColor: '#10b981', fillOpacity: 1 }} />
+                        </MapContainer>
+                      </div>
+                    ) : (
+                      <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-emerald-300 text-center text-xs font-semibold text-emerald-800">No valid latitude/longitude submitted</div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">State verification checklist</label>
+                      <span className="text-[11px] font-bold text-slate-600">{Object.values(reviewChecks).filter(Boolean).length}/{REVIEW_CHECKS.length} verified</span>
+                    </div>
+                    {REVIEW_CHECKS.map(({ key, label }) => (
+                      <label key={key} className="flex cursor-pointer items-start gap-3 rounded border border-blue-100 bg-white p-3 text-xs font-semibold text-slate-800">
+                        <input type="checkbox" checked={Boolean(reviewChecks[key])} onChange={(e) => updateReviewCheck(key, e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1e3a8a] focus:ring-blue-500" />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+
                   {/* 1. Land Bank Verification */}
                   <div className="space-y-2">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -298,7 +409,7 @@ export default function StateDashboard() {
                       type="checkbox"
                       id="actCompliance"
                       checked={actComplianceChecked}
-                      onChange={(e) => setActComplianceChecked(e.target.checked)}
+                      onChange={(e) => updateReviewCheck('actCompliance', e.target.checked)}
                       className="w-4 h-4 text-[#1e3a8a] border-slate-300 rounded focus:ring-blue-500"
                     />
                     <label htmlFor="actCompliance" className="text-xs font-semibold text-slate-800 cursor-pointer">
@@ -337,11 +448,14 @@ export default function StateDashboard() {
 
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || (stateScrutinyStatus === 'Verified' && (!allChecksPassed || landBankStatus === 'Unchecked'))}
                     className="w-full bg-[#1e3a8a] hover:bg-blue-900 text-white text-xs uppercase tracking-wider py-3.5 px-6 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {submitting ? 'Processing Scrutiny...' : 'Submit Scrutiny & Forward Data'} <ArrowUpRight size={14} />
                   </button>
+                  {stateScrutinyStatus === 'Verified' && (!allChecksPassed || landBankStatus === 'Unchecked') && (
+                    <p className="text-center text-[11px] font-semibold text-amber-700">Complete every checklist item and select a land bank status before forwarding.</p>
+                  )}
                 </form>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-center text-slate-400">
