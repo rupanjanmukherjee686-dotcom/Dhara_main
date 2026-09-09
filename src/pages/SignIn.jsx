@@ -114,6 +114,11 @@ function SignIn() {
   )
 
   const [verified, setVerified] = useState(false)
+  const [resetStep, setResetStep] = useState(0)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetOtp, setResetOtp] = useState("")
+  const [resetNewPassword, setResetNewPassword] = useState("")
+  const [resetBusy, setResetBusy] = useState(false)
 
   const selectedPortal = portalRoles.find(
     (role) => role.id === selectedRole
@@ -143,6 +148,10 @@ function SignIn() {
     setCaptcha("")
     setCaptchaValue(generateCaptcha())
     setVerified(false)
+    setResetStep(0)
+    setResetEmail("")
+    setResetOtp("")
+    setResetNewPassword("")
     setShowPassword(false)
     setIsSignUpMode(false)
   }
@@ -150,6 +159,65 @@ function SignIn() {
   const handleAuthoritySelect = (roleId) => {
     handleRoleChange(roleId)
     setAuthorityModalOpen(false)
+  }
+
+  const requestPasswordReset = async () => {
+    const email = resetEmail.trim().toLowerCase()
+    if (!email) return
+
+    setResetBusy(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/password-reset/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        alert(data.message || "Password reset request failed.")
+        return
+      }
+      setResetEmail(email)
+      setResetStep(2)
+      alert("OTP has been sent to your authorized email.")
+    } catch (error) {
+      console.error("Password reset request error:", error)
+      alert("Unable to send OTP. Please try again.")
+    } finally {
+      setResetBusy(false)
+    }
+  }
+
+  const confirmPasswordReset = async () => {
+    if (!resetOtp || resetNewPassword.length < 8) return
+
+    setResetBusy(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/password-reset/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resetEmail,
+          otp: resetOtp,
+          newPassword: resetNewPassword,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        alert(data.message || "Password could not be changed.")
+        return
+      }
+      alert("Password changed successfully. Please sign in with your new password.")
+      setPassword("")
+      setResetStep(0)
+      setResetOtp("")
+      setResetNewPassword("")
+    } catch (error) {
+      console.error("Password reset confirmation error:", error)
+      alert("Unable to change password. Please try again.")
+    } finally {
+      setResetBusy(false)
+    }
   }
 
   // ==========================================
@@ -589,6 +657,19 @@ function SignIn() {
                       </div>
                     </div>
 
+                    {!isSignUpMode && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetEmail(identifier)
+                          setResetStep(1)
+                        }}
+                        className="text-xs font-bold text-[#1e3a8a] hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+
                     {/* =================================================
                         CAPTCHA
                     ================================================- */}
@@ -720,6 +801,62 @@ function SignIn() {
                 </div>
 
               </form>
+
+              {resetStep > 0 && !isGovernment && (
+                <div className="mx-6 mb-6 rounded-xl border border-blue-200 bg-blue-50/60 p-5 md:mx-8">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a]">Password recovery</p>
+                      <h3 className="mt-1 font-outfit text-lg font-bold text-slate-900">
+                        {resetStep === 1 ? "Verify authorized email" : "Enter OTP and new password"}
+                      </h3>
+                    </div>
+                    <button type="button" onClick={() => setResetStep(0)} className="text-slate-500 hover:text-slate-900" aria-label="Close password recovery">
+                      <X size={17} />
+                    </button>
+                  </div>
+
+                  {resetStep === 1 ? (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-xs leading-relaxed text-slate-600">We will send a one-time password only if this email belongs to an authorized Company or Landowner account.</p>
+                      <input
+                        type="email"
+                        value={resetEmail}
+                        onChange={(event) => setResetEmail(event.target.value)}
+                        placeholder="name@example.com"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-xs font-medium focus:border-[#1e3a8a] focus:outline-none"
+                      />
+                      <button type="button" onClick={requestPasswordReset} disabled={resetBusy || !resetEmail.trim()} className="w-full rounded-lg bg-[#1e3a8a] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
+                        {resetBusy ? "Sending OTP..." : "Send OTP"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-xs text-slate-600">OTP sent to <strong>{resetEmail}</strong>. It expires in 10 minutes.</p>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={resetOtp}
+                        onChange={(event) => setResetOtp(event.target.value.replace(/\D/g, ""))}
+                        placeholder="6-digit OTP"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-xs font-medium tracking-widest focus:border-[#1e3a8a] focus:outline-none"
+                      />
+                      <input
+                        type="password"
+                        minLength={8}
+                        value={resetNewPassword}
+                        onChange={(event) => setResetNewPassword(event.target.value)}
+                        placeholder="New password (minimum 8 characters)"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-xs font-medium focus:border-[#1e3a8a] focus:outline-none"
+                      />
+                      <button type="button" onClick={confirmPasswordReset} disabled={resetBusy || resetOtp.length !== 6 || resetNewPassword.length < 8} className="w-full rounded-lg bg-emerald-700 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
+                        {resetBusy ? "Updating password..." : "Change password"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </section>
 

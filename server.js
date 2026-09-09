@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
+import nodemailer from 'nodemailer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,6 +12,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+const mailTransport = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+    ? nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT || 587),
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        })
+    : null;
 
 // MongoDB Atlas ক্লাউড কানেকশন
 const mongoURI = "mongodb+srv://rupanjanmukherjee686_db_user:RhtdmQDuxfObt9M9@cluster0.5upqtsy.mongodb.net/dhara_portal?retryWrites=true&w=majority&appName=Cluster0";
@@ -24,7 +37,9 @@ mongoose.connect(mongoURI)
 const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
+    resetOtpHash: { type: String },
+    resetOtpExpiresAt: { type: Date },
 });
 const User = mongoose.model('User', userSchema);
 
@@ -100,12 +115,13 @@ const Project = mongoose.model('Project', projectSchema);
 app.post('/api/signup', async (req, res) => {
     try {
         const { name, email, password } = req.body;
-        const existingUser = await User.findOne({ email });
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const existingUser = await User.findOne({ email: normalizedEmail });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "User already exists with this email!" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ name, email, password: hashedPassword });
+        const newUser = new User({ name, email: normalizedEmail, password: hashedPassword });
         await newUser.save();
         res.status(201).json({ success: true, message: "User registered successfully!" });
     } catch (err) {
@@ -117,7 +133,7 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/signin', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: String(email || '').trim().toLowerCase() });
         if (!user) {
             return res.status(401).json({ success: false, message: "You are not authorized!" });
         }
@@ -128,6 +144,66 @@ app.post('/api/signin', async (req, res) => {
         res.json({ success: true, message: "Login Successful", name: user.name, email: user.email });
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Password reset: verify the registered email, send a short-lived OTP, then accept a new password.
+app.post('/api/password-reset/request', async (req, res) => {
+    try {
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'No authorized account exists for this email.' });
+        }
+        if (!mailTransport || !process.env.SMTP_FROM) {
+            return res.status(503).json({ success: false, message: 'Password reset email service is not configured.' });
+        }
+
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        user.resetOtpHash = await bcrypt.hash(otp, 10);
+        user.resetOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        await user.save();
+
+        await mailTransport.sendMail({
+            from: process.env.SMTP_FROM,
+            to: user.email,
+            subject: 'DHARA password reset OTP',
+            text: `Your DHARA password reset OTP is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
+        });
+
+        res.json({ success: true, message: 'A password reset OTP has been sent to your authorized email.' });
+    } catch (err) {
+        console.error('Password reset request failed:', err);
+        res.status(500).json({ success: false, message: 'Unable to send password reset OTP.' });
+    }
+});
+
+app.post('/api/password-reset/confirm', async (req, res) => {
+    try {
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const otp = String(req.body.otp || '').trim();
+        const newPassword = String(req.body.newPassword || '');
+        const user = await User.findOne({ email });
+
+        if (!user || !user.resetOtpHash || !user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+            return res.status(400).json({ success: false, message: 'OTP is invalid or has expired.' });
+        }
+        if (!/^\d{6}$/.test(otp) || !(await bcrypt.compare(otp, user.resetOtpHash))) {
+            return res.status(400).json({ success: false, message: 'Incorrect OTP.' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must contain at least 8 characters.' });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.resetOtpHash = undefined;
+        user.resetOtpExpiresAt = undefined;
+        await user.save();
+        res.json({ success: true, message: 'Password changed successfully. You can sign in now.' });
+    } catch (err) {
+        console.error('Password reset confirmation failed:', err);
+        res.status(500).json({ success: false, message: 'Unable to change password.' });
     }
 });
 
