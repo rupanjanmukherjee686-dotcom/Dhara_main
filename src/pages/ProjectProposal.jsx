@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { API_BASE_URL } from "../api"
 
 const projectTypes = [
   "Industrial Development",
@@ -132,6 +133,7 @@ function ProjectProposal() {
     const proposal = {
       projectId,
       ...form,
+      email: form.email || localStorage.getItem("userEmail") || "",
       documents: documents.map((document) => ({
         name: document.name,
         size: document.size,
@@ -144,7 +146,7 @@ function ProjectProposal() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/proposals", {
+      const response = await fetch(`${API_BASE_URL}/api/proposals`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

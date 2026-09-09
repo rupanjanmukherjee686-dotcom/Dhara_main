@@ -16,6 +16,7 @@ import {
   FileText,
   AlertCircle
 } from "lucide-react";
+import { API_BASE_URL } from "../api";
 
 export default function StateDashboard() {
   const [proposals, setProposals] = useState([]);
@@ -36,7 +37,7 @@ export default function StateDashboard() {
 
   const fetchProposals = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/state/proposals');
+      const response = await fetch(`${API_BASE_URL}/api/state/proposals`);
       const data = await response.json();
       if (data.success) {
         setProposals(data.proposals);
@@ -72,7 +73,7 @@ export default function StateDashboard() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/state/scrutiny/${selectedProposal.projectId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/state/scrutiny/${selectedProposal.projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

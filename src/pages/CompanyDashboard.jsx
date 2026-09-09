@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { API_BASE_URL } from "../api"
 
 function CompanyDashboard() {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ function CompanyDashboard() {
         const userEmail = localStorage.getItem("userEmail")
         
         if (userEmail) {
-          const response = await fetch(`http://localhost:5000/api/projects?email=${encodeURIComponent(userEmail)}`)
+          const response = await fetch(`${API_BASE_URL}/api/projects?email=${encodeURIComponent(userEmail)}`)
           const text = await response.text()
           let data = {}
           try {
