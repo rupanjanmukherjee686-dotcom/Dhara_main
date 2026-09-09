@@ -2,7 +2,6 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
-import nodemailer from 'nodemailer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -13,20 +12,34 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const mailTransport = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
-    ? nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 15000,
-        })
-    : null;
+const resendApiKey = process.env.RESEND_API_KEY;
+const resendFrom = process.env.RESEND_FROM;
+
+async function sendPasswordResetEmail(to, otp) {
+    if (!resendApiKey || !resendFrom) return false;
+
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            from: resendFrom,
+            to: [to],
+            subject: 'DHARA password reset OTP',
+            text: `Your DHARA password reset OTP is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
+        }),
+        signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Resend API ${response.status}: ${errorText}`);
+    }
+
+    return true;
+}
 
 // MongoDB Atlas ক্লাউড কানেকশন
 const mongoURI = "mongodb+srv://rupanjanmukherjee686_db_user:RhtdmQDuxfObt9M9@cluster0.5upqtsy.mongodb.net/dhara_portal?retryWrites=true&w=majority&appName=Cluster0";
@@ -159,7 +172,7 @@ app.post('/api/password-reset/request', async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, message: 'No authorized account exists for this email.' });
         }
-        if (!mailTransport || !process.env.SMTP_FROM) {
+        if (!resendApiKey || !resendFrom) {
             return res.status(503).json({ success: false, message: 'Password reset email service is not configured.' });
         }
 
@@ -168,12 +181,7 @@ app.post('/api/password-reset/request', async (req, res) => {
         user.resetOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
         await user.save();
 
-        await mailTransport.sendMail({
-            from: process.env.SMTP_FROM,
-            to: user.email,
-            subject: 'DHARA password reset OTP',
-            text: `Your DHARA password reset OTP is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
-        });
+        await sendPasswordResetEmail(user.email, otp);
 
         res.json({ success: true, message: 'A password reset OTP has been sent to your authorized email.' });
     } catch (err) {
