@@ -4,4 +4,4 @@ const isLocalhost =
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
-  (isLocalhost ? "http://localhost:5000" : "https://dhara-main.onrender.com")
+  (isLocalhost ? "http://localhost:5000" : window.location.origin)
