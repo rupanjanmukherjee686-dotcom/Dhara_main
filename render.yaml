@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dhara
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: RRA_OFFICER_ID
+        value: RRA-ADMIN-001
+      - key: RRA_OFFICER_PASSWORD
+        sync: false

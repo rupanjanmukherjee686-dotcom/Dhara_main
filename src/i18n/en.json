@@ -1,0 +1,104 @@
+{
+  "ministry": "Ministry of Land and Infrastructure, Government of India",
+  "skipText": "Skip to main content",
+  "langSwitch": "English / বাংলা",
+  "systemTitle": "DHARA",
+  "systemSubtitle": "NATIONAL LAND INFORMATION SYSTEM",
+  "portalsNav": "PORTALS",
+  "workflowNav": "LIFECYCLE",
+  "digitalIndia": "Digital India",
+  "powerToEmpower": "Power To Empower",
+  
+  "slide1Badge": "Government Initiative",
+  "slide1Title": "National Land Information System",
+  "slide1Highlight": "DHARA Platform",
+  "slide1Desc": "Streamlining land acquisition, verification, and administrative approvals securely across all government tiers.",
+  "slide1Primary": "Explore Portals",
+  "slide1Secondary": "View lifecycle",
+
+  "slide2Badge": "Strategic Acquisition",
+  "slide2Title": "Transparent & Efficient",
+  "slide2Highlight": "Land Procurement",
+  "slide2Desc": "Empowering industrial development with digitized survey mapping, clear ownership tracking, and seamless multi-department coordination.",
+  "slide2Primary": "Propose Project",
+  "slide2Secondary": "Learn More",
+
+  "slide3Badge": "Fast-Track Approval",
+  "slide3Title": "Direct State-Level Scrutiny",
+  "slide3Highlight": "Workflow System",
+  "slide3Desc": "Bypassing traditional bottlenecks with centralized state authority reviews, automated document verification, and instant tracking.",
+  "slide3Primary": "View Dashboard",
+  "slide3Secondary": "Guidelines",
+
+  "section1Tag": "01 / Government Portals",
+  "section1Desc": "DHARA connects different administrative tiers through one secure unified land information system.",
+  "section1Heading": "Different roles. One national system.",
+  "section1SubDesc": "Companies initiate projects, government authorities manage the administrative lifecycle, and landowners access transparent land status.",
+
+  "portal1Number": "01",
+  "portal1Label": "PROJECT AUTHORITY",
+  "portal1Title": "Company",
+  "portal1Desc": "A project-facing view for organisations requiring land for infrastructure and development.",
+  "portal1Question": "What requires attention?",
+  "portal1FooterSub": "Secure access",
+  "portal1FooterAction": "Open portal",
+
+  "portal2Number": "02",
+  "portal2Label": "GOVERNMENT SYSTEM",
+  "portal2Title": "Authority",
+  "portal2Desc": "The connected government layer through which district, field, state and central responsibilities operate.",
+  "portal2Question": "Which authority are you?",
+  "portal2FooterSub": "Four government tiers",
+  "portal2FooterAction": "Choose authority",
+
+  "portal3Number": "03",
+  "portal3Label": "PUBLIC ACCESS",
+  "portal3Title": "Landowner",
+  "portal3Desc": "A simpler public-facing view helping people understand what is happening with their land.",
+  "portal3Question": "What happens to my land?",
+  "portal3FooterSub": "Secure access",
+  "portal3FooterAction": "Open portal",
+
+  "lawLibraryTitle": "Land acquisition law library",
+  "lawLibraryDesc": "Official legislation and rules relevant to project authorities preparing land acquisition proposals.",
+  "officialPdf": "Official PDF document",
+
+  "section2Tag": "02 / Map Reference",
+  "section2Desc": "A neutral geographic reference map. Project markers appear only inside authorised review workflows.",
+  "section2Heading": "India, viewed clearly.",
+
+  "modalTitle": "Select your administrative tier.",
+  "modalSub": "Choose your specific official role to sign into the secure portal.",
+  "proceedSignIn": "Proceed to sign in",
+
+  "role1Title": "District Authority",
+  "role1Label": "DISTRICT ADMINISTRATION",
+  "role1Desc": "Review proposals, coordinate verification and manage district-level administrative decisions.",
+
+  "role2Title": "Field Officer",
+  "role2Label": "GROUND VERIFICATION",
+  "role2Desc": "Verify parcels on the ground, capture evidence and update field observations.",
+
+  "role3Title": "State Authority",
+  "role3Label": "STATE OVERSIGHT",
+  "role3Desc": "Monitor districts, identify delays and oversee project progress across the state.",
+
+  "role4Title": "Central Authority",
+  "role4Label": "NATIONAL OVERSIGHT",
+  "role4Desc": "Monitor national progress, compare states and identify systemic delays.",
+
+  "section3Tag": "03 / Project Lifecycle",
+  "section3Desc": "Every project follows a transparent sequence of administrative and verification decisions.",
+  "section3Heading": "From proposal to completion.",
+  "section3SubDesc": "A step-by-step audit trail showing the active stage, responsible government authority, and next action.",
+
+  "currentStageLabel": "Current Stage",
+  "whatHappens": "What happens",
+  "responsible": "Responsible",
+  "nextAction": "Next action",
+  "systemState": "System State",
+
+  "footerText1": "DHARA / National Land Information System, NIC",
+  "footerText2": "Portals · GIS Mapping · Lifecycle Tracking",
+  "footerText3": "© 2026 Government of India"
+}
