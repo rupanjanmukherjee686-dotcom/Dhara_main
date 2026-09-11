@@ -12,35 +12,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendFrom = process.env.RESEND_FROM;
-
-async function sendPasswordResetEmail(to, otp) {
-    if (!resendApiKey || !resendFrom) return false;
-
-    const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            from: resendFrom,
-            to: [to],
-            subject: 'DHARA password reset OTP',
-            text: `Your DHARA password reset OTP is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
-        }),
-        signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Resend API ${response.status}: ${errorText}`);
-    }
-
-    return true;
-}
-
 // MongoDB Atlas ক্লাউড কানেকশন
 const mongoURI = "mongodb+srv://rupanjanmukherjee686_db_user:RhtdmQDuxfObt9M9@cluster0.5upqtsy.mongodb.net/dhara_portal?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -54,8 +25,6 @@ const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    resetOtpHash: { type: String },
-    resetOtpExpiresAt: { type: Date },
 });
 const User = mongoose.model('User', userSchema);
 
@@ -89,6 +58,12 @@ const projectSchema = new mongoose.Schema({
     screeningScore: { type: Number, default: 0 },
     screeningLabel: { type: String, default: '' },
     stateRemarks: { type: String, default: '' },
+    stateReview: { type: mongoose.Schema.Types.Mixed, default: {} },
+    districtReview: { type: mongoose.Schema.Types.Mixed, default: {} },
+    fieldVerification: { type: mongoose.Schema.Types.Mixed, default: {} },
+    centralReview: { type: mongoose.Schema.Types.Mixed, default: {} },
+    landownerAccess: { type: mongoose.Schema.Types.Mixed, default: {} },
+    auditTrail: { type: Array, default: [] },
     
     // Forwarding Status
     forwardedToDistrict: { type: Boolean, default: false },
@@ -163,61 +138,6 @@ app.post('/api/signin', async (req, res) => {
     }
 });
 
-// Password reset: verify the registered email, send a short-lived OTP, then accept a new password.
-app.post('/api/password-reset/request', async (req, res) => {
-    try {
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'No authorized account exists for this email.' });
-        }
-        if (!resendApiKey || !resendFrom) {
-            return res.status(503).json({ success: false, message: 'Password reset email service is not configured.' });
-        }
-
-        const otp = String(Math.floor(100000 + Math.random() * 900000));
-        user.resetOtpHash = await bcrypt.hash(otp, 10);
-        user.resetOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        await user.save();
-
-        await sendPasswordResetEmail(user.email, otp);
-
-        res.json({ success: true, message: 'A password reset OTP has been sent to your authorized email.' });
-    } catch (err) {
-        console.error('Password reset request failed:', err);
-        res.status(500).json({ success: false, message: 'Unable to send password reset OTP.' });
-    }
-});
-
-app.post('/api/password-reset/confirm', async (req, res) => {
-    try {
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const otp = String(req.body.otp || '').trim();
-        const newPassword = String(req.body.newPassword || '');
-        const user = await User.findOne({ email });
-
-        if (!user || !user.resetOtpHash || !user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
-            return res.status(400).json({ success: false, message: 'OTP is invalid or has expired.' });
-        }
-        if (!/^\d{6}$/.test(otp) || !(await bcrypt.compare(otp, user.resetOtpHash))) {
-            return res.status(400).json({ success: false, message: 'Incorrect OTP.' });
-        }
-        if (newPassword.length < 8) {
-            return res.status(400).json({ success: false, message: 'Password must contain at least 8 characters.' });
-        }
-
-        user.password = await bcrypt.hash(newPassword, 10);
-        user.resetOtpHash = undefined;
-        user.resetOtpExpiresAt = undefined;
-        await user.save();
-        res.json({ success: true, message: 'Password changed successfully. You can sign in now.' });
-    } catch (err) {
-        console.error('Password reset confirmation failed:', err);
-        res.status(500).json({ success: false, message: 'Unable to change password.' });
-    }
-});
-
 // ৩. প্রজেক্ট ফেচ (Fetch) করার API
 app.get('/api/projects', async (req, res) => {
     try {
@@ -230,6 +150,32 @@ app.get('/api/projects', async (req, res) => {
         res.json({ success: true, projects });
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error", error: err.message });
+    }
+});
+
+app.get('/api/projects/:projectId', async (req, res) => {
+    try {
+        const project = await Project.findOne({
+            $or: [{ projectId: req.params.projectId }, { id: req.params.projectId }],
+        });
+        if (!project) return res.status(404).json({ success: false, message: 'Project not found.' });
+        res.json({ success: true, project });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+});
+
+app.post('/api/landowner/access', async (req, res) => {
+    try {
+        const { dharaId, surveyNumber, accessCode } = req.body;
+        const project = await Project.findOne({ projectId: dharaId });
+        const access = project?.landownerAccess || {};
+        if (!project || access.surveyNumber !== surveyNumber || access.accessCode !== String(accessCode || '').toUpperCase()) {
+            return res.status(401).json({ success: false, message: 'Landowner access details could not be verified.' });
+        }
+        res.json({ success: true, project });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Landowner access lookup failed.', error: err.message });
     }
 });
 
@@ -298,6 +244,21 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
         project.screeningLabel = screeningLabel !== undefined ? screeningLabel : project.screeningLabel;
         project.stateRemarks = stateRemarks !== undefined ? stateRemarks : project.stateRemarks;
         project.currentStage = currentStage !== undefined ? currentStage : project.currentStage;
+        project.stateReview = {
+            ...(project.stateReview || {}),
+            status: stateScrutinyStatus,
+            officerId: req.body.officerId || project.stateReview?.officerId || '',
+            checks: reviewChecks || project.reviewChecks,
+            remarks: stateRemarks || project.stateRemarks,
+            screeningScore: screeningScore ?? project.screeningScore,
+            updatedAt: new Date().toISOString(),
+        };
+        project.auditTrail.push({
+            stage: 'State Scrutiny',
+            officerId: req.body.officerId || '',
+            status: stateScrutinyStatus,
+            at: new Date().toISOString(),
+        });
 
         // Jodi state scrutiny verified hoy, tahole automatic District ebong Central-er kache forward kore dewa
         if (stateScrutinyStatus === 'Verified') {
@@ -315,6 +276,99 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ success: false, message: "Server error", error: err.message });
+    }
+});
+
+app.put('/api/district/verify/:id', async (req, res) => {
+    try {
+        const project = await Project.findOne({ projectId: req.params.id });
+        if (!project) return res.status(404).json({ success: false, message: 'Project not found.' });
+        const { officerId, status = 'Verified', remarks = '', checks = {}, nextStage = 'Field Verification' } = req.body;
+        project.districtReview = { officerId, status, remarks, checks, verifiedAt: new Date().toISOString() };
+        project.currentStage = nextStage;
+        project.status = status === 'Verified' ? 'District Verified' : 'District Review Issue';
+        project.authority = nextStage === 'Field Verification' ? 'Field Officer' : status === 'Rejected' ? 'District Authority' : 'Project Authority';
+        project.forwardedToDistrict = false;
+        project.auditTrail.push({ stage: 'District Review', officerId, status, at: new Date().toISOString() });
+        await project.save();
+        res.json({ success: true, project });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'District verification failed.', error: err.message });
+    }
+});
+
+app.put('/api/field/verify/:id', async (req, res) => {
+    try {
+        const project = await Project.findOne({ projectId: req.params.id });
+        if (!project) return res.status(404).json({ success: false, message: 'Project not found.' });
+        const { officerId, status = 'Verified', remarks = '', photos = [], coordinates = null } = req.body;
+        project.fieldVerification = { officerId, status, remarks, photos, coordinates, verifiedAt: new Date().toISOString() };
+        project.currentStage = status === 'Verified' ? 'District Field Review' : 'Company Revision';
+        project.status = status === 'Verified' ? 'Field Verification Completed' : 'Field Verification Issue';
+        project.authority = status === 'Verified' ? 'District Authority' : 'Project Authority';
+        project.auditTrail.push({ stage: 'Field Verification', officerId, status, photoCount: photos.length, at: new Date().toISOString() });
+        await project.save();
+        res.json({ success: true, project });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Field verification failed.', error: err.message });
+    }
+});
+
+app.put('/api/landowner/consent/:id', async (req, res) => {
+    try {
+        const project = await Project.findOne({ projectId: req.params.id });
+        if (!project) return res.status(404).json({ success: false, message: 'Project not found.' });
+        const percentage = Math.max(0, Math.min(100, Number(req.body.consentPercentage || 0)));
+        const noticeEligible = percentage >= 80;
+        project.landownerAccess = {
+            ...(project.landownerAccess || {}),
+            dharaId: project.projectId,
+            surveyNumber: project.surveyPlotNumbers || '',
+            accessCode: project.landownerAccess?.accessCode || Math.random().toString(36).slice(2, 8).toUpperCase(),
+            consentPercentage: percentage,
+            offlineNotified: Boolean(req.body.offlineNotified),
+            noticeEligible,
+            updatedAt: new Date().toISOString(),
+        };
+        if (noticeEligible) {
+            project.noticeToCompany = { issuedBy: req.body.officerId || '', issuedAt: new Date().toISOString(), reason: 'Landowner consent reached 80%' };
+            project.auditTrail.push({ stage: 'District Notice to Company', officerId: req.body.officerId || '', status: 'Notice Issued', at: new Date().toISOString() });
+        }
+        await project.save();
+        res.json({ success: true, project, noticeEligible });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Landowner consent update failed.', error: err.message });
+    }
+});
+
+app.get('/api/central/projects', async (req, res) => {
+    try {
+        const projects = await Project.find({ forwardedToCentral: true }).sort({ _id: -1 });
+        res.json({ success: true, projects });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Central projects could not be loaded.', error: err.message });
+    }
+});
+
+app.put('/api/central/review/:id', async (req, res) => {
+    try {
+        const project = await Project.findOne({ projectId: req.params.id });
+        if (!project) return res.status(404).json({ success: false, message: 'Project not found.' });
+        const { officerId, decision, remarks = '' } = req.body;
+        const statusMap = {
+            approve: { status: 'Approved for Acquisition', currentStage: 'Acquisition' },
+            information: { status: 'Additional Information Required', currentStage: 'Central Oversight' },
+            reject: { status: 'Rejected', currentStage: 'Central Rejected' },
+        };
+        const outcome = statusMap[decision] || statusMap.information;
+        project.centralReview = { officerId, decision, remarks, reviewedAt: new Date().toISOString() };
+        project.status = outcome.status;
+        project.currentStage = outcome.currentStage;
+        project.auditTrail.push({ stage: 'Central Oversight', officerId, status: decision, at: new Date().toISOString() });
+        await project.save();
+        res.json({ success: true, project });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Central review failed.', error: err.message });
     }
 });
 

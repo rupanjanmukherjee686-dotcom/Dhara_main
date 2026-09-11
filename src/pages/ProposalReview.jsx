@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { API_BASE_URL } from "../api"
 
 function ProposalReview() {
   const navigate = useNavigate()
@@ -18,112 +19,50 @@ function ProposalReview() {
 
   const [project, setProject] = useState(null)
   const [notFound, setNotFound] = useState(false)
+  const [actionBusy, setActionBusy] = useState(false)
 
   useEffect(() => {
-    const storedProjects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const foundProject = storedProjects.find(
-      (item) => item.id === projectId
-    )
-
-    if (foundProject) {
-      setProject(foundProject)
-    } else {
-      setNotFound(true)
-    }
+    fetch(`${API_BASE_URL}/api/projects/${projectId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) setProject(data.project)
+        else setNotFound(true)
+      })
+      .catch(() => setNotFound(true))
   }, [projectId])
 
   // ACCEPT PROPOSAL
-  const handleAccept = () => {
-    const storedProjects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const updatedProjects = storedProjects.map((item) => {
-      if (item.id !== projectId) {
-        return item
-      }
-
-      return {
-        ...item,
-        stage: "Field Verification",
-        status: "Pending Field Verification",
-        authority: "Field Officer",
-        nextAction: "Field Officer Verification",
-        districtDecision: "Accepted",
-        districtDecisionAt: new Date().toISOString(),
-      }
-    })
-
-    localStorage.setItem(
-      "dhara-projects",
-      JSON.stringify(updatedProjects)
-    )
-
-    navigate("/portal/district")
+  const updateDistrictReview = async (status, nextStage, message) => {
+    setActionBusy(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/district/verify/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          officerId: localStorage.getItem("dhara-officer-id") || "District Authority",
+          status,
+          nextStage,
+          remarks: message,
+          checks: { proposalReviewed: true, companyDataChecked: true, landDataChecked: true },
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.message || "District update failed")
+      navigate("/portal/district")
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setActionBusy(false)
+    }
   }
+
+  const handleAccept = () => updateDistrictReview("Verified", "Field Verification", "Proposal accepted for field verification.")
 
   // REQUEST CHANGES
-  const handleRequestChanges = () => {
-    const storedProjects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const updatedProjects = storedProjects.map((item) => {
-      if (item.id !== projectId) {
-        return item
-      }
-
-      return {
-        ...item,
-        stage: "Company Revision",
-        status: "Changes Requested",
-        authority: "Project Authority",
-        nextAction: "Company Revision Required",
-        districtDecision: "Changes Requested",
-        districtDecisionAt: new Date().toISOString(),
-      }
-    })
-
-    localStorage.setItem(
-      "dhara-projects",
-      JSON.stringify(updatedProjects)
-    )
-
-    navigate("/portal/district")
-  }
+  const handleRequestChanges = () => updateDistrictReview("Changes Requested", "Company Revision", "Additional information or corrections requested.")
 
   // REJECT PROPOSAL
-  const handleReject = () => {
-    const storedProjects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const updatedProjects = storedProjects.map((item) => {
-      if (item.id !== projectId) {
-        return item
-      }
-
-      return {
-        ...item,
-        stage: "District Rejected",
-        status: "Rejected",
-        authority: "District Authority",
-        nextAction: "No Further Action",
-        districtDecision: "Rejected",
-        districtDecisionAt: new Date().toISOString(),
-      }
-    })
-
-    localStorage.setItem(
-      "dhara-projects",
-      JSON.stringify(updatedProjects)
-    )
-
-    navigate("/portal/district")
-  }
+  const handleReject = () => updateDistrictReview("Rejected", "District Rejected", "Proposal rejected during district review.")
 
   if (notFound) {
     return (
@@ -221,7 +160,7 @@ function ProposalReview() {
         >
           <div className="p-6 sm:p-8">
             <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--earth)]">
-              {project.id}
+              {project.projectId}
             </div>
 
             <h2 className="mt-2 font-serif text-3xl sm:text-4xl">
@@ -426,6 +365,7 @@ function ProposalReview() {
               {/* ACCEPT */}
               <button
                 onClick={handleAccept}
+                disabled={actionBusy}
                 className="border border-[var(--line-dark)] bg-[var(--white)] px-4 py-4 text-left transition hover:border-[var(--earth)]"
               >
                 <CheckCircle2
@@ -449,6 +389,7 @@ function ProposalReview() {
               {/* REQUEST CHANGES */}
               <button
                 onClick={handleRequestChanges}
+                disabled={actionBusy}
                 className="border border-[var(--line-dark)] bg-[var(--white)] px-4 py-4 text-left transition hover:border-[var(--earth)]"
               >
                 <RotateCcw
@@ -473,6 +414,7 @@ function ProposalReview() {
               {/* REJECT */}
               <button
                 onClick={handleReject}
+                disabled={actionBusy}
                 className="border border-[var(--line-dark)] bg-[var(--white)] px-4 py-4 text-left transition hover:border-[var(--earth)]"
               >
                 <XCircle

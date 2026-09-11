@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { API_BASE_URL } from "../api"
 
 function FieldVerification() {
   const navigate = useNavigate()
@@ -19,60 +20,29 @@ function FieldVerification() {
   const [decision, setDecision] = useState("")
   const [remarks, setRemarks] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [photos, setPhotos] = useState([])
 
   useEffect(() => {
-    const projects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const foundProject = projects.find(
-      (item) => item.id === projectId
-    )
-
-    setProject(foundProject || null)
+    fetch(`${API_BASE_URL}/api/projects/${projectId}`)
+      .then((response) => response.json())
+      .then((data) => setProject(data.success ? data.project : null))
+      .catch(() => setProject(null))
   }, [projectId])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!decision) return
-
-    const projects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const updatedProjects = projects.map((item) => {
-      if (item.id !== projectId) return item
-
-      if (decision === "verified") {
-        return {
-          ...item,
-          stage: "District Field Review",
-          status: "Field Verification Completed",
-          authority: "District Authority",
-          nextAction: "District Authority Review",
-          fieldVerification: "Verified",
-          fieldVerificationRemarks: remarks.trim(),
-          fieldVerificationAt: new Date().toISOString(),
-        }
-      }
-
-      return {
-        ...item,
-        stage: "Company Revision",
-        status: "Field Verification Issue",
-        authority: "Project Authority",
-        nextAction: "Company Revision Required",
-        fieldVerification: "Issue Found",
-        fieldVerificationRemarks: remarks.trim(),
-        fieldVerificationAt: new Date().toISOString(),
-      }
+    const response = await fetch(`${API_BASE_URL}/api/field/verify/${projectId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        officerId: localStorage.getItem("dhara-officer-id") || "Field Officer",
+        status: decision === "verified" ? "Verified" : "Issue Found",
+        remarks: remarks.trim(),
+        photos,
+      }),
     })
-
-    localStorage.setItem(
-      "dhara-projects",
-      JSON.stringify(updatedProjects)
-    )
-
-    setSubmitted(true)
+    const data = await response.json()
+    if (response.ok && data.success) setSubmitted(true)
   }
 
   if (!project) {
@@ -170,7 +140,7 @@ function FieldVerification() {
 
         <section className="border-b border-[var(--line)] pb-8">
           <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[var(--earth)]">
-            Assigned verification · {project.id}
+            Assigned verification · {project.projectId}
           </p>
 
           <h1 className="mt-3 max-w-4xl font-serif text-3xl leading-tight md:text-5xl">
@@ -353,6 +323,14 @@ function FieldVerification() {
                 rows={5}
                 placeholder="Record observations, discrepancies, parcel findings, or verification notes..."
                 className="mt-2 w-full resize-none border border-[var(--line)] bg-[var(--paper)] p-4 text-sm outline-none transition focus:border-[var(--earth)]"
+              />
+
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => setPhotos(Array.from(event.target.files || []).map((file) => ({ name: file.name, type: file.type, size: file.size })))}
+                className="mt-4 block w-full text-xs text-slate-600"
               />
             </div>
 

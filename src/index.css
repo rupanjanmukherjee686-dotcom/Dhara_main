@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
 @import "tailwindcss";
 
 @import "@fontsource/playfair-display/400.css";
@@ -14,24 +16,24 @@
 ========================================================= */
 
 :root {
-  --paper: #f3efe6;
-  --paper-deep: #e9e3d7;
+  --paper: #f8fafc;
+  --paper-deep: #eef2f7;
 
-  --ink: #171714;
-  --ink-soft: #5d5a52;
+  --ink: #0f172a;
+  --ink-soft: #64748b;
 
-  --line: #cfc8b9;
-  --line-dark: #b9b1a2;
+  --line: #dbe3ee;
+  --line-dark: #c3cfdf;
 
-  --earth: #b65f3c;
-  --earth-dark: #82442e;
+  --earth: #2563eb;
+  --earth-dark: #1d4ed8;
 
-  --white: #faf8f3;
+  --white: #ffffff;
 }
 
 @layer base {
   body {
-    font-family: "IBM Plex Mono", monospace;
+    font-family: "Plus Jakarta Sans", sans-serif !important;
     color: var(--ink);
     background: var(--paper);
     margin: 0;
@@ -76,11 +78,50 @@
 ========================================================= */
 
 .font-serif {
-  font-family: "Playfair Display", serif;
+  font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
 }
 
 .font-mono {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.font-jakarta {
+  font-family: "Plus Jakarta Sans", sans-serif !important;
+}
+
+.font-outfit {
+  font-family: "Outfit", sans-serif !important;
+}
+
+/* Keep compact labels readable across every portal. */
+.text-\[8px\] {
+  font-size: 10px !important;
+}
+
+.text-\[9px\] {
+  font-size: 10px !important;
+}
+
+.text-\[10px\] {
+  font-size: 11px !important;
+}
+
+.dhara-modern-page {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.dhara-modern-page > header,
+.dhara-modern-page header {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--line);
+}
+
+.dhara-modern-page article,
+.dhara-modern-page section > div.border,
+.dhara-modern-page section > div.bg-\[var\(--white\)\] {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
 

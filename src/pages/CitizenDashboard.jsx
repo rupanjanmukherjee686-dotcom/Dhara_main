@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { API_BASE_URL } from "../api"
 
 const STORAGE_KEY = "dhara-projects"
 const ACCESS_STORAGE_KEY = "dhara-citizen-access"
@@ -271,7 +272,7 @@ function CitizenDashboard() {
       })
   }, [verifiedRecord, search])
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     setVerificationError("")
 
     const enteredReference = reference.trim().toUpperCase()
@@ -284,6 +285,27 @@ function CitizenDashboard() {
     }
 
     setIsVerifying(true)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/landowner/access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dharaId: enteredReference,
+          surveyNumber: enteredSurvey,
+          accessCode: enteredCode,
+        }),
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        setVerifiedRecord(buildAccessRecord(data.project))
+        setSearch("")
+        setIsVerifying(false)
+        return
+      }
+    } catch (error) {
+      console.error("Landowner access lookup failed:", error)
+    }
 
     window.setTimeout(() => {
       const match = availableRecords.find((record) => {
@@ -350,7 +372,7 @@ function CitizenDashboard() {
     (currentStageIndex >= 7 ? "Eligible" : "Implementation Locked")
 
   return (
-    <div className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
+    <div className="dhara-modern-page min-h-screen bg-[var(--paper)] text-[var(--ink)]">
 
       {/* =====================================================
           HEADER

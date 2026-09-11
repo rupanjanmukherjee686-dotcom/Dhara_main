@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { API_BASE_URL } from "../api"
 
 function DistrictFieldReview() {
   const navigate = useNavigate()
@@ -22,71 +23,29 @@ function DistrictFieldReview() {
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
-    const projects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const foundProject = projects.find(
-      (item) => item.id === projectId
-    )
-
-    setProject(foundProject || null)
+    fetch(`${API_BASE_URL}/api/projects/${projectId}`)
+      .then((response) => response.json())
+      .then((data) => setProject(data.success ? data.project : null))
+      .catch(() => setProject(null))
   }, [projectId])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!decision) return
-
-    const projects = JSON.parse(
-      localStorage.getItem("dhara-projects") || "[]"
-    )
-
-    const updatedProjects = projects.map((item) => {
-      if (item.id !== projectId) return item
-
-      if (decision === "verified") {
-        return {
-          ...item,
-          stage: "State Scrutiny",
-          status: "Pending State Review",
-          authority: "State Authority",
-          nextAction: "State Authority Review",
-          districtFieldReview: "Verified",
-          districtFieldReviewRemarks: remarks.trim(),
-          districtFieldReviewAt: new Date().toISOString(),
-        }
-      }
-
-      if (decision === "correction") {
-        return {
-          ...item,
-          stage: "Field Verification",
-          status: "Field Reverification Required",
-          authority: "Field Officer",
-          nextAction: "Field Officer Reverification",
-          districtFieldReview: "Correction Required",
-          districtFieldReviewRemarks: remarks.trim(),
-          districtFieldReviewAt: new Date().toISOString(),
-        }
-      }
-
-      return {
-        ...item,
-        stage: "District Rejected",
-        status: "Rejected",
-        authority: "District Authority",
-        nextAction: "No Further Action",
-        districtFieldReview: "Rejected",
-        districtFieldReviewRemarks: remarks.trim(),
-        districtFieldReviewAt: new Date().toISOString(),
-      }
+    const status = decision === "verified" ? "Verified" : decision === "correction" ? "Correction Required" : "Rejected"
+    const nextStage = decision === "verified" ? "State Scrutiny" : decision === "correction" ? "Field Verification" : "District Rejected"
+    const response = await fetch(`${API_BASE_URL}/api/district/verify/${projectId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        officerId: localStorage.getItem("dhara-officer-id") || "District Authority",
+        status,
+        nextStage,
+        remarks: remarks.trim(),
+        checks: { fieldVerificationReviewed: true },
+      }),
     })
-
-    localStorage.setItem(
-      "dhara-projects",
-      JSON.stringify(updatedProjects)
-    )
-
-    setSubmitted(true)
+    const data = await response.json()
+    if (response.ok && data.success) setSubmitted(true)
   }
 
   if (!project) {

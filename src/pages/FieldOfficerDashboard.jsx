@@ -10,24 +10,26 @@ import {
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { clearSession } from "../auth"
+import { API_BASE_URL } from "../api"
 
 function FieldOfficerDashboard() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
 
   useEffect(() => {
-    const loadProjects = () => {
-      const storedProjects = JSON.parse(
-        localStorage.getItem("dhara-projects") || "[]"
-      )
-
-      const assignedProjects = storedProjects.filter(
-        (project) =>
-          project.stage === "Field Verification" &&
-          project.authority === "Field Officer"
-      )
-
-      setProjects(assignedProjects)
+    const loadProjects = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects`)
+        const data = await response.json()
+        const assignedProjects = (data.projects || []).filter((project) =>
+          (project.currentStage === "Field Verification" || project.stage === "Field Verification") &&
+          !project.fieldVerification?.verifiedAt
+        )
+        setProjects(assignedProjects)
+      } catch (error) {
+        console.error("Error loading field projects:", error)
+        setProjects([])
+      }
     }
 
     loadProjects()
@@ -45,7 +47,7 @@ function FieldOfficerDashboard() {
   )
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
+    <main className="dhara-modern-page min-h-screen bg-[var(--paper)] text-[var(--ink)]">
 
       {/* HEADER */}
 
@@ -200,7 +202,7 @@ function FieldOfficerDashboard() {
               {projects.map((project, index) => (
 
                 <motion.article
-                  key={project.id}
+                  key={project.projectId}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.06 }}
@@ -216,7 +218,7 @@ function FieldOfficerDashboard() {
                         <div className="flex flex-wrap items-center gap-3">
 
                           <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--earth)]">
-                            {project.id}
+                            {project.projectId}
                           </span>
 
                           <span className="border border-[var(--line)] px-2 py-1 font-mono text-[8px] uppercase tracking-wider text-[var(--ink-soft)]">
@@ -252,7 +254,7 @@ function FieldOfficerDashboard() {
                       <button
                         onClick={() =>
                           navigate(
-                            `/portal/field/project/${project.id}`
+                            `/portal/field/project/${project.projectId}`
                           )
                         }
                         className="flex shrink-0 items-center justify-center gap-2 bg-[var(--ink)] px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-[var(--white)] transition hover:bg-[var(--earth)]"

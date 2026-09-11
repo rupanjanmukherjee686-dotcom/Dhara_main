@@ -12,8 +12,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { motion } from "framer-motion"
-
-const STORAGE_KEY = "dhara-projects"
+import { API_BASE_URL } from "../api"
 
 function CentralProjectReview() {
   const navigate = useNavigate()
@@ -25,82 +24,28 @@ function CentralProjectReview() {
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
-    const projects = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) || "[]"
-    )
-
-    const foundProject = projects.find(
-      (item) => item.id === projectId
-    )
-
-    setProject(foundProject || null)
+    fetch(`${API_BASE_URL}/api/projects/${projectId}`)
+      .then((response) => response.json())
+      .then((data) => setProject(data.success ? data.project : null))
+      .catch(() => setProject(null))
   }, [projectId])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!decision) return
-
-    const projects = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) || "[]"
-    )
-
-    const updatedProjects = projects.map((item) => {
-      if (item.id !== projectId) return item
-
-      if (decision === "approve") {
-        return {
-          ...item,
-
-          stage: "Acquisition",
-          status: "Approved for Acquisition",
-          authority: "Government Implementation",
-          nextAction: "Land Acquisition / Implementation",
-
-          centralDecision: "Approved",
-          centralDecisionRemarks: remarks.trim(),
-          centralDecisionAt: new Date().toISOString(),
-        }
-      }
-
-      if (decision === "information") {
-        return {
-          ...item,
-
-          stage: "Central Oversight",
-          status: "Additional Information Required",
-          authority: "Project Authority",
-          nextAction: "Company Information Required",
-
-          centralDecision: "Information Required",
-          centralDecisionRemarks: remarks.trim(),
-          centralDecisionAt: new Date().toISOString(),
-        }
-      }
-
-      return {
-        ...item,
-
-        stage: "Central Rejected",
-        status: "Rejected",
-        authority: "Central Authority",
-        nextAction: "No Further Action",
-
-        centralDecision: "Rejected",
-        centralDecisionRemarks: remarks.trim(),
-        centralDecisionAt: new Date().toISOString(),
-      }
+    const response = await fetch(`${API_BASE_URL}/api/central/review/${projectId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        officerId: localStorage.getItem("dhara-officer-id") || "Central Authority",
+        decision,
+        remarks: remarks.trim(),
+      }),
     })
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(updatedProjects)
-    )
-
-    const updatedProject = updatedProjects.find(
-      (item) => item.id === projectId
-    )
-
-    setProject(updatedProject)
-    setSubmitted(true)
+    const data = await response.json()
+    if (response.ok && data.success) {
+      setProject(data.project)
+      setSubmitted(true)
+    }
   }
 
   if (!project) {

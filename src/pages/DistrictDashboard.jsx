@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { API_BASE_URL } from "../api"
 
 function DistrictDashboard() {
   const navigate = useNavigate()
@@ -19,25 +20,28 @@ function DistrictDashboard() {
   const [fieldReviewProjects, setFieldReviewProjects] = useState([])
 
   useEffect(() => {
-    const loadProjects = () => {
-      const storedProjects = JSON.parse(
-        localStorage.getItem("dhara-projects") || "[]"
-      )
+    const loadProjects = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects`)
+        const data = await response.json()
+        const storedProjects = data.success && Array.isArray(data.projects)
+          ? data.projects
+          : []
 
-      const pendingProjects = storedProjects.filter(
-        (project) =>
-          project.stage === "District Scrutiny" &&
-          project.authority === "District Authority"
-      )
-
-      const projectsForFieldReview = storedProjects.filter(
-        (project) =>
-          project.stage === "District Field Review" &&
-          project.authority === "District Authority"
-      )
-
-      setProjects(pendingProjects)
-      setFieldReviewProjects(projectsForFieldReview)
+        setProjects(storedProjects.filter(
+          (project) =>
+            project.forwardedToDistrict === true &&
+            !project.districtReview?.verifiedAt
+        ))
+        setFieldReviewProjects(storedProjects.filter(
+          (project) =>
+            project.stage === "District Field Review" || project.currentStage === "District Field Review"
+        ))
+      } catch (error) {
+        console.error("Error loading district projects:", error)
+        setProjects([])
+        setFieldReviewProjects([])
+      }
     }
 
     loadProjects()
@@ -62,7 +66,7 @@ function DistrictDashboard() {
     )
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
+    <main className="dhara-modern-page min-h-screen bg-[var(--paper)] text-[var(--ink)]">
 
       {/* HEADER */}
       <header className="border-b border-[var(--line)] bg-[var(--paper)]">
@@ -171,7 +175,7 @@ function DistrictDashboard() {
               {fieldReviewProjects.map((project, index) => (
 
                 <motion.article
-                  key={project.id}
+                  key={project.projectId || project.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.06 }}
@@ -186,7 +190,7 @@ function DistrictDashboard() {
                       <div>
 
                         <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--earth)]">
-                          {project.id}
+                          {project.projectId || project.id}
                         </div>
 
                         <h3 className="mt-2 font-serif text-2xl">
@@ -258,7 +262,7 @@ function DistrictDashboard() {
                       <button
                         onClick={() =>
                           navigate(
-                            `/portal/district/field-review/${project.id}`
+                            `/portal/district/field-review/${project.projectId || project.id}`
                           )
                         }
                         className="flex items-center justify-center gap-2 bg-[var(--ink)] px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-[var(--white)] transition hover:bg-[var(--earth)]"
@@ -331,7 +335,7 @@ function DistrictDashboard() {
               {projects.map((project, index) => (
 
                 <motion.article
-                  key={project.id}
+                  key={project.projectId || project.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.06 }}
@@ -346,7 +350,7 @@ function DistrictDashboard() {
                       <div>
 
                         <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-[var(--earth)]">
-                          {project.id}
+                          {project.projectId || project.id}
                         </div>
 
                         <h3 className="mt-2 font-serif text-2xl">
@@ -403,7 +407,7 @@ function DistrictDashboard() {
                       <button
                         onClick={() =>
                           navigate(
-                            `/portal/district/proposal/${project.id}`
+                            `/portal/district/proposal/${project.projectId || project.id}`
                           )
                         }
                         className="flex items-center justify-center gap-2 bg-[var(--ink)] px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-[var(--white)] transition hover:bg-[var(--earth)]"

@@ -131,6 +131,7 @@ export default function StateDashboard() {
           screeningScore: getScreeningResult(selectedProposal, reviewChecks).score,
           screeningLabel: getScreeningResult(selectedProposal, reviewChecks).label,
           stateRemarks,
+          officerId: localStorage.getItem("dhara-officer-id") || "State Authority",
           currentStage: stateScrutinyStatus === 'Verified' ? 'Forwarded to District & Central' : 'State Scrutiny In Progress'
         })
       });

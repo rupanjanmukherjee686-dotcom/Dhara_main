@@ -93,7 +93,7 @@ function ProjectMarker({ project, selected, onSelect }) {
   )
 }
 
-export default function DHARAMap() {
+export default function DHARAMap({ showMarkers = true }) {
   const [selectedProject, setSelectedProject] = useState(null)
 
   return (
@@ -115,7 +115,7 @@ export default function DHARAMap() {
 
         <MapViewport selectedProject={selectedProject} />
 
-        {projects.map((project) => (
+        {showMarkers && projects.map((project) => (
           <ProjectMarker
             key={project.id}
             project={project}

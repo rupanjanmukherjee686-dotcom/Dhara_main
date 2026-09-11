@@ -11,8 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { motion } from "framer-motion"
-
-const STORAGE_KEY = "dhara-projects"
+import { API_BASE_URL } from "../api"
 
 function CentralDashboard() {
   const navigate = useNavigate()
@@ -20,19 +19,11 @@ function CentralDashboard() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
     try {
-      const storedProjects = JSON.parse(
-        localStorage.getItem(STORAGE_KEY) || "[]"
-      )
-
-      const centralProjects = storedProjects.filter(
-        (project) =>
-          project.stage === "Central Oversight" &&
-          project.authority === "Central Authority"
-      )
-
-      setProjects(centralProjects)
+      const response = await fetch(`${API_BASE_URL}/api/central/projects`)
+      const data = await response.json()
+      setProjects(data.success ? data.projects : [])
     } catch (error) {
       console.error("Failed to load central projects:", error)
       setProjects([])
@@ -308,6 +299,37 @@ function CentralDashboard() {
                         <p className="text-[11px] text-slate-500 font-medium">National review</p>
                       </div>
                     </div>
+
+                    <div className="grid gap-3 border-t border-slate-200 bg-white p-5 text-xs sm:grid-cols-4">
+                      <div><p className="font-bold uppercase tracking-wider text-slate-400">State officer</p><p className="mt-1 font-semibold text-slate-800">{project.stateReview?.officerId || "Not recorded"}</p></div>
+                      <div><p className="font-bold uppercase tracking-wider text-slate-400">District review</p><p className="mt-1 font-semibold text-slate-800">{project.districtReview?.status || "Not recorded"}</p></div>
+                      <div><p className="font-bold uppercase tracking-wider text-slate-400">Field officer / photos</p><p className="mt-1 font-semibold text-slate-800">{project.fieldVerification?.officerId || "Not recorded"} / {project.fieldVerification?.photos?.length || 0}</p></div>
+                      <div><p className="font-bold uppercase tracking-wider text-slate-400">Audit events</p><p className="mt-1 font-semibold text-slate-800">{project.auditTrail?.length || 0}</p></div>
+                    </div>
+
+                    <details className="border-t border-slate-200 bg-white p-5">
+                      <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-[#1e3a8a]">
+                        Open complete submitted record and authority history
+                      </summary>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        {Object.entries(project)
+                          .filter(([key, value]) => !['_id', '__v', 'auditTrail', 'documents'].includes(key) && value !== '' && value !== null && value !== undefined)
+                          .map(([key, value]) => (
+                            <div key={key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{key.replaceAll(/([A-Z])/g, ' $1')}</p>
+                              <p className="mt-1 break-words text-xs font-semibold text-slate-800">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
+                            </div>
+                          ))}
+                        <div className="sm:col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#1e3a8a]">Authority audit trail</p>
+                          <div className="mt-2 space-y-1 text-xs text-slate-700">
+                            {(project.auditTrail || []).map((event, index) => (
+                              <p key={`${event.stage}-${index}`}><strong>{event.stage}</strong> · {event.status} · {event.officerId || 'Officer not recorded'} · {event.at}</p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </details>
 
                     {/* FOOTER */}
                     <div className="flex flex-col gap-4 border-t border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
