@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(cors());
 
 // Keep database credentials in local .env or Render environment variables.
-const mongoURI = process.env.MONGODB_URI;
+const mongoURI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL;
 
 if (!mongoURI) {
     console.warn("MONGODB_URI is not configured; database features are unavailable.");
@@ -127,13 +127,30 @@ const projectSchema = new mongoose.Schema({
 
 const Project = mongoose.model('Project', projectSchema);
 
+function requireDatabase(res) {
+    if (mongoose.connection.readyState !== 1) {
+        res.status(503).json({
+            success: false,
+            message: 'Database is not connected. Check the Render MONGODB_URI environment variable.'
+        });
+        return false;
+    }
+    return true;
+}
+
 app.get('/api/health', (req, res) => {
-    res.json({ success: true, service: 'dhara-api', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+    const connected = mongoose.connection.readyState === 1;
+    res.status(connected ? 200 : 503).json({
+        success: connected,
+        service: 'dhara-api',
+        database: connected ? 'connected' : 'disconnected',
+    });
 });
 
 // ১. সাইন-আপ (Signup) API রাউট
 app.post('/api/signup', async (req, res) => {
     try {
+        if (!requireDatabase(res)) return;
         const { name, email, password } = req.body;
         const normalizedEmail = String(email || '').trim().toLowerCase();
         const existingUser = await User.findOne({ email: normalizedEmail });
@@ -152,6 +169,7 @@ app.post('/api/signup', async (req, res) => {
 // ২. সাইন-ইন বা লগইন (Signin) API রাউট
 app.post('/api/signin', async (req, res) => {
     try {
+        if (!requireDatabase(res)) return;
         const { email, password } = req.body;
         const user = await User.findOne({ email: String(email || '').trim().toLowerCase() });
         if (!user) {
@@ -558,6 +576,7 @@ app.post('/api/officer/signup', async (req, res) => {
 // ৮. অফিসার সাইন-ইন API
 app.post('/api/officer/signin', async (req, res) => {
     try {
+        if (!requireDatabase(res)) return;
         const { officialId, password, role } = req.body;
         const officer = await Officer.findOne({ officialId });
         if (!officer) {
