@@ -21,25 +21,25 @@ const mongoURI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env
 if (!mongoURI) {
     console.warn("MONGODB_URI is not configured; database features are unavailable.");
 } else {
-mongoose.connect(mongoURI)
-    .then(async () => {
-        console.log("MongoDB Atlas Connected Successfully!");
-        const defaultOfficer = {
+    mongoose.connect(mongoURI)
+        .then(async () => {
+            console.log("MongoDB Atlas Connected Successfully!");
+            const defaultOfficer = {
                 name: "Rehabilitation & Resettlement Administrator",
-            officialId: process.env.RRA_OFFICER_ID || "RRA-ADMIN-001",
+                officialId: process.env.RRA_OFFICER_ID || "RRA-ADMIN-001",
                 role: "rehabilitation",
-            password: process.env.RRA_OFFICER_PASSWORD || "change-this-password"
-        };
-        const existingOfficer = await Officer.findOne({ officialId: defaultOfficer.officialId });
-        if (!existingOfficer) {
+                password: process.env.RRA_OFFICER_PASSWORD || "change-this-password"
+            };
+            const existingOfficer = await Officer.findOne({ officialId: defaultOfficer.officialId });
+            if (!existingOfficer) {
                 await Officer.create({
-                        ...defaultOfficer,
-                        password: await bcrypt.hash(defaultOfficer.password, 10)
+                    ...defaultOfficer,
+                    password: await bcrypt.hash(defaultOfficer.password, 10)
                 });
                 console.log(`Default rehabilitation officer created: ${defaultOfficer.officialId}`);
-        }
-    })
-  .catch((err) => console.log("Database connection error: ", err));
+            }
+        })
+        .catch((err) => console.log("Database connection error: ", err));
 }
 
 // ইউজারের জন্য স্কিমা ও মডেল তৈরি
@@ -237,7 +237,7 @@ app.post('/api/landowner/access', async (req, res) => {
     }
 });
 
-// ৪. নতুন প্রজেক্ট প্রপোজ বা সেভ করার API (/api/projects ebong /api/proposals)
+// ৪. নতুন প্রজেক্ট প্রপোজ বা সেভ করার API
 const handleProjectCreation = async (req, res) => {
     try {
         const projectData = req.body;
@@ -273,17 +273,18 @@ app.get('/api/state/proposals', async (req, res) => {
     }
 });
 
+// 🟢 REHABILITATION PROJECTS FETCH API (UPDATED FOR BETTER MATCHING)
 app.get('/api/rehabilitation/projects', async (req, res) => {
     try {
         const projects = await Project.find({
             $or: [
                 { forwardedToRehabilitation: true },
-                {
-                    forwardedToDistrict: true,
+                { 
                     stateScrutinyStatus: 'Verified',
                     'fieldVerification.verifiedAt': { $exists: true, $ne: null },
-                    'districtReview.verifiedAt': { $exists: true, $ne: null },
+                    'districtReview.verifiedAt': { $exists: true, $ne: null }
                 },
+                { currentStage: 'Forwarded to Rehabilitation Authority' }
             ],
         }).sort({ _id: -1 });
         res.json({ success: true, projects });
@@ -292,7 +293,7 @@ app.get('/api/rehabilitation/projects', async (req, res) => {
     }
 });
 
-// ৬. State Scrutiny, Land Bank Status, GIS Flag ebong Forward update korar API
+// ৬. State Scrutiny, Land Bank Status, GIS Flag ebong Forward update korar API (UPDATED LOGIC)
 app.put('/api/state/scrutiny/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -305,7 +306,8 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
             screeningScore,
             screeningLabel,
             stateRemarks,
-            currentStage 
+            currentStage,
+            forwardedToRehabilitation
         } = req.body;
 
         const project = await Project.findOne({ projectId: id });
@@ -322,6 +324,12 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
         project.screeningLabel = screeningLabel !== undefined ? screeningLabel : project.screeningLabel;
         project.stateRemarks = stateRemarks !== undefined ? stateRemarks : project.stateRemarks;
         project.currentStage = currentStage !== undefined ? currentStage : project.currentStage;
+
+        // 🟢 Rehabilitation forwarding status handling
+        if (forwardedToRehabilitation !== undefined) {
+            project.forwardedToRehabilitation = forwardedToRehabilitation;
+        }
+
         project.stateReview = {
             ...(project.stateReview || {}),
             status: stateScrutinyStatus,
@@ -338,20 +346,20 @@ app.put('/api/state/scrutiny/:id', async (req, res) => {
             at: new Date().toISOString(),
         });
 
-        // Jodi state scrutiny verified hoy, tahole automatic District ebong Central-er kache forward kore dewa
         const fieldAndDistrictVerified = Boolean(
             project.fieldVerification?.verifiedAt &&
-            project.districtReview?.verifiedAt &&
-            (project.fieldVerification?.status === 'Verified' || project.fieldVerification?.status === 'Field Verification Completed' || !project.fieldVerification?.status) &&
-            (project.districtReview?.status === 'Verified' || project.districtReview?.status === 'District Verified' || !project.districtReview?.status)
+            project.districtReview?.verifiedAt
         );
 
         if (stateScrutinyStatus === 'Verified') {
             project.forwardedToDistrict = true;
             project.forwardedToCentral = true;
-            project.forwardedToRehabilitation = fieldAndDistrictVerified;
-            project.status = 'Under District & Central Review';
-            project.currentStage = 'Forwarded to District & Central';
+            if (forwardedToRehabilitation !== undefined) {
+                project.forwardedToRehabilitation = forwardedToRehabilitation;
+            } else {
+                project.forwardedToRehabilitation = fieldAndDistrictVerified;
+            }
+            project.status = 'Under Review';
         }
 
         await project.save();
@@ -556,16 +564,20 @@ app.put('/api/central/review/:id', async (req, res) => {
     }
 });
 
-// ৭. অফিসার রেজিস্টার করার API
+// ৭. অফিসার রেজিস্টার করার API (Normalized input with trimming)
 app.post('/api/officer/signup', async (req, res) => {
     try {
+        if (!requireDatabase(res)) return;
         const { name, officialId, role, password } = req.body;
-        const existingOfficer = await Officer.findOne({ officialId });
+        const cleanOfficialId = String(officialId || '').trim();
+        const cleanRole = role ? String(role).trim().toLowerCase() : '';
+
+        const existingOfficer = await Officer.findOne({ officialId: cleanOfficialId });
         if (existingOfficer) {
             return res.status(400).json({ success: false, message: "Officer already exists with this ID!" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newOfficer = new Officer({ name, officialId, role, password: hashedPassword });
+        const newOfficer = new Officer({ name, officialId: cleanOfficialId, role: cleanRole, password: hashedPassword });
         await newOfficer.save();
         res.status(201).json({ success: true, message: "Officer registered successfully in database!" });
     } catch (err) {
@@ -573,20 +585,23 @@ app.post('/api/officer/signup', async (req, res) => {
     }
 });
 
-// ৮. অফিসার সাইন-ইন API
+// ৮. অফিসার সাইন-ইন API (Added robust trimming and case-insensitivity for safety)
 app.post('/api/officer/signin', async (req, res) => {
     try {
         if (!requireDatabase(res)) return;
         const { officialId, password, role } = req.body;
-        const officer = await Officer.findOne({ officialId });
+        const cleanOfficialId = String(officialId || '').trim();
+        const cleanRole = role ? String(role).trim().toLowerCase() : null;
+
+        const officer = await Officer.findOne({ officialId: cleanOfficialId });
         if (!officer) {
             return res.status(401).json({ success: false, message: "Invalid Government ID!" });
         }
-        if (role && officer.role !== role) {
+        if (cleanRole && officer.role !== cleanRole) {
             return res.status(401).json({ success: false, message: `You are not authorized for the ${role} portal!` });
         }
         let isPasswordValid = false;
-        if (officer.password.startsWith('$2b$')) {
+        if (officer.password && officer.password.startsWith('$2b$')) {
             isPasswordValid = await bcrypt.compare(password, officer.password);
         } else {
             isPasswordValid = (password === officer.password);
@@ -596,7 +611,7 @@ app.post('/api/officer/signin', async (req, res) => {
         }
         res.json({ success: true, message: "Officer Login Successful", name: officer.name, role: officer.role });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", error: err.message });
     }
 });
 

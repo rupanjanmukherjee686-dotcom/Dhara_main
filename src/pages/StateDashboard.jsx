@@ -67,13 +67,7 @@ export default function StateDashboard() {
   const [reviewChecks, setReviewChecks] = useState({});
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/state/proposals`)
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) setProposals(data.proposals);
-      })
-      .catch((err) => console.error("Error fetching proposals:", err))
-      .finally(() => setLoading(false));
+    fetchProposals();
   }, []);
 
   const fetchProposals = async () => {
@@ -83,6 +77,8 @@ export default function StateDashboard() {
       if (data.success) setProposals(data.proposals);
     } catch (err) {
       console.error("Error fetching proposals:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,6 +122,13 @@ export default function StateDashboard() {
     if (!selectedProposal) return;
 
     setSubmitting(true);
+
+    const isFieldAndDistrictVerified = 
+      selectedProposal.fieldVerification?.status === 'Verified' && 
+      selectedProposal.fieldVerification?.verifiedAt && 
+      selectedProposal.districtReview?.status === 'Verified' && 
+      selectedProposal.districtReview?.verifiedAt;
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/state/scrutiny/${selectedProposal.projectId}`, {
         method: 'PUT',
@@ -140,13 +143,21 @@ export default function StateDashboard() {
           screeningLabel: getScreeningResult(selectedProposal, reviewChecks).label,
           stateRemarks,
           officerId: localStorage.getItem("dhara-officer-id") || "State Authority",
-          currentStage: stateScrutinyStatus === 'Verified' ? 'Forwarded to District & Central' : 'State Scrutiny In Progress'
+          currentStage: isFieldAndDistrictVerified 
+            ? 'Forwarded to Rehabilitation Authority' 
+            : 'Forwarded to District & Central',
+          // 🟢 rehab-এ ডাটা ফরোয়ার্ড করার জন্য এই গুরুত্বপূর্ণ ফ্ল্যাগটি যুক্ত করা হলো
+          forwardedToRehabilitation: isFieldAndDistrictVerified ? true : Boolean(selectedProposal.forwardedToRehabilitation)
         })
       });
 
       const data = await response.json();
       if (data.success) {
-        alert("Scrutiny updated and data forwarded successfully!");
+        alert(
+          isFieldAndDistrictVerified
+            ? "Proposal verified and forwarded to Rehabilitation Authority successfully!"
+            : "Scrutiny updated and data forwarded successfully!"
+        );
         fetchProposals();
         setSelectedProposal(null);
       } else {
